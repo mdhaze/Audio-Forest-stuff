@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Smoker Audio</title>
+<style>
+  :root {
+    --bg: #0c1219;
+    --ink: #d0d7e0;
+    --dim: #6b7a8d;
+    --accent: #4a9eff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    user-select: none;
+  }
+  h1 {
+    font-size: 13px;
+    letter-spacing: 0.25em;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-bottom: 28px;
+  }
+  .temps {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 24px;
+    margin-bottom: 32px;
+    font-size: 14px;
+  }
+  .temps div {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .label { color: var(--dim); }
+  .value { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .controls {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+  button {
+    background: transparent;
+    border: 1px solid #2a3a4d;
+    color: var(--dim);
+    font-family: inherit;
+    font-size: 13px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  button.active {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .status {
+    margin-top: 24px;
+    font-size: 12px;
+    color: var(--dim);
+  }
+  input[type=range] {
+    width: 120px;
+    accent-color: var(--accent);
+  }
+</style>
+</head>
+<body>
+  <h1>Smoker Audio</h1>
+
+  <div class="temps">
+    <div><span class="label">Pit</span><span class="value" id="pit">—</span></div>
+    <div><span class="label">Drive</span><span class="value" id="drive">—</span></div>
+    <div><span class="label">Rib 1</span><span class="value" id="rib1">—</span></div>
+    <div><span class="label">Rib 2</span><span class="value" id="rib2">—</span></div>
+    <div><span class="label">Rib 3</span><span class="value" id="rib3">—</span></div>
+    <div><span class="label">Setpoint</span><span class="value" id="setpoint">—</span></div>
+  </div>
+
+  <div class="controls">
+    <button id="toggleBtn">Start</button>
+    <input type="range" id="vol" min="0" max="1" step="0.01" value="0.35">
+  </div>
+
+  <div class="status" id="status">Tap Start to begin</div>
+
+<script>
+(() => {
+  // ========== CONFIG ==========
+  const HA_URL = "http://homeassistant.local:8123";
+  const HA_TOKEN = "YOUR_LONG_LIVED_TOKEN_HERE";   // ← paste your token here
+
+  const ENTITIES = {
+    pit:      "sensor.14_texas_smoker_vertical_lower_tray",
+    rib1:     "sensor.14_texas_smoker_v_m_shelf_center",
+    rib2:     "sensor.14_texas_smoker_v_middle_left",
+    rib3:     "sensor.14_texas_smoker_middle_r",
+    drive:    "sensor.14_texas_smoker_drive_output",
+    setpoint: "sensor.14_texas_smoker_setpoint"
+  };
+
+  const POLL_MS = 35000; // 35 seconds
+
+  // ========== STATE ==========
+  let audioCtx = null;
+  let masterGain = null;
+  let running = false;
+  let values = { pit: 200, rib1: 180, rib2: 180, rib3: 180, drive: 0, setpoint: 180 };
+
+  // Audio nodes
+  let droneOsc, droneGain;
+  let ribOsc = [null, null, null];
+  let ribGain = [null, null, null];
+  let noiseSource, noiseFilter, noiseGain;
+
+  // ========== AUDIO ENGINE ==========
+  function initAudio() {
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = parseFloat(document.getElementById("vol").value);
+    masterGain.connect(audioCtx.destination);
+
+    // Deep drone (pit)
+    droneOsc = audioCtx.createOscillator();
+    droneGain = audioCtx.createGain();
+    droneOsc.type = "sine";
+    droneOsc.frequency.value = 55;
+    droneGain.gain.value = 0.22;
+    droneOsc.connect(droneGain);
+    droneGain.connect(masterGain);
+    droneOsc.start();
+
+    // Three rib tones
+    const baseFreqs = [110, 138, 164];
+    for (let i = 0; i < 3; i++) {
+      ribOsc[i] = audioCtx.createOscillator();
+      ribGain[i] = audioCtx.createGain();
+      ribOsc[i].type = i === 0 ? "triangle" : "sine";
+      ribOsc[i].frequency.value = baseFreqs[i];
+      ribGain[i].gain.value = 0.07 - i * 0.015;
+      ribOsc[i].connect(ribGain[i]);
+      ribGain[i].connect(masterGain);
+      ribOsc[i].start();
+    }
+
+    // Noise texture (fan / fire activity)
+    const bufferSize = audioCtx.sampleRate * 2;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+    noiseSource = audioCtx.createBufferSource();
+    noiseSource.buffer = buffer;
+    noiseSource.loop = true;
+
+    noiseFilter = audioCtx.createBiquadFilter();
+    noiseFilter.type = "bandpass";
+    noiseFilter.frequency.value = 800;
+    noiseFilter.Q.value = 0.7;
+
+    noiseGain = audioCtx.createGain();
+    noiseGain.gain.value = 0.0;
+
+    noiseSource.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(masterGain);
+    noiseSource.start();
+  }
+
+  function updateAudio() {
+    if (!audioCtx || !running) return;
+
+    // Pit → drone pitch (roughly 45–90 Hz)
+    const pit = values.pit || 200;
+    const droneFreq = 42 + (pit - 150) * 0.18;
+    droneOsc.frequency.setTargetAtTime(Math.max(38, Math.min(95, droneFreq)), audioCtx.currentTime, 1.8);
+
+    // Rib probes → three tones
+    const ribs = [values.rib1, values.rib2, values.rib3];
+    const base = [108, 136, 162];
+    ribs.forEach((t, i) => {
+      if (!t) return;
+      // Map ~140–210°F into a useful musical range
+      const freq = base[i] + (t - 160) * 0.55;
+      ribOsc[i].frequency.setTargetAtTime(Math.max(70, Math.min(280, freq)), audioCtx.currentTime, 1.4);
+    });
+
+    // Drive / fan → noise level + brightness
+    const drive = Math.max(0, Math.min(100, values.drive || 0));
+    const noiseLevel = (drive / 100) * 0.085;
+    noiseGain.gain.setTargetAtTime(noiseLevel, audioCtx.currentTime, 1.2);
+    noiseFilter.frequency.setTargetAtTime(500 + drive * 12, audioCtx.currentTime, 1.5);
+  }
+
+  // ========== DATA ==========
+  async function fetchStates() {
+    try {
+      const res = await fetch(`${HA_URL}/api/states`, {
+        headers: { Authorization: `Bearer ${HA_TOKEN}` }
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const states = await res.json();
+
+      const map = {};
+      states.forEach(s => { map[s.entity_id] = s; });
+
+      function num(id) {
+        const s = map[id];
+        if (!s || s.state === "unavailable" || s.state === "unknown") return null;
+        return parseFloat(s.state);
+      }
+
+      values.pit      = num(ENTITIES.pit)      ?? values.pit;
+      values.rib1     = num(ENTITIES.rib1)     ?? values.rib1;
+      values.rib2     = num(ENTITIES.rib2)     ?? values.rib2;
+      values.rib3     = num(ENTITIES.rib3)     ?? values.rib3;
+      values.drive    = num(ENTITIES.drive)    ?? values.drive;
+      values.setpoint = num(ENTITIES.setpoint) ?? values.setpoint;
+
+      // Update UI
+      document.getElementById("pit").textContent      = values.pit ? values.pit.toFixed(1) + "°" : "—";
+      document.getElementById("rib1").textContent     = values.rib1 ? values.rib1.toFixed(1) + "°" : "—";
+      document.getElementById("rib2").textContent     = values.rib2 ? values.rib2.toFixed(1) + "°" : "—";
+      document.getElementById("rib3").textContent     = values.rib3 ? values.rib3.toFixed(1) + "°" : "—";
+      document.getElementById("drive").textContent    = values.drive !== null ? values.drive + "%" : "—";
+      document.getElementById("setpoint").textContent = values.setpoint ? values.setpoint.toFixed(0) + "°" : "—";
+
+      document.getElementById("status").textContent = "Live · " + new Date().toLocaleTimeString();
+      updateAudio();
+    } catch (err) {
+      document.getElementById("status").textContent = "Error: " + err.message;
+      console.error(err);
+    }
+  }
+
+  // ========== UI ==========
+  const btn = document.getElementById("toggleBtn");
+  const vol = document.getElementById("vol");
+
+  btn.addEventListener("click", async () => {
+    if (!running) {
+      initAudio();
+      if (audioCtx.state === "suspended") await audioCtx.resume();
+      running = true;
+      btn.textContent = "Stop";
+      btn.classList.add("active");
+      document.getElementById("status").textContent = "Starting…";
+      fetchStates();
+      setInterval(fetchStates, POLL_MS);
+    } else {
+      running = false;
+      btn.textContent = "Start";
+      btn.classList.remove("active");
+      if (masterGain) masterGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.4);
+      document.getElementById("status").textContent = "Stopped";
+    }
+  });
+
+  vol.addEventListener("input", () => {
+    if (masterGain) {
+      masterGain.gain.setTargetAtTime(parseFloat(vol.value), audioCtx.currentTime, 0.15);
+    }
+  });
+})();
+</script>
+</body>
+</html>
