@@ -10,6 +10,7 @@
     --ink: #d0d7e0;
     --dim: #6b7a8d;
     --accent: #4a9eff;
+    --rule: rgba(255,255,255,0.10);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
@@ -47,7 +48,7 @@
   .value { color: var(--ink); font-variant-numeric: tabular-nums; }
   .controls {
     display: flex;
-    gap: 16px;
+    gap: 14px;
     align-items: center;
   }
   button {
@@ -69,16 +70,126 @@
     font-size: 12px;
     color: var(--dim);
   }
-  input[type=range] {
-    width: 120px;
-    accent-color: var(--accent);
+  .version {
+    position: absolute;
+    bottom: 10px;
+    right: 14px;
+    font-size: 10px;
+    color: rgba(255,255,255,0.18);
+  }
+  .settings-btn {
+    position: absolute;
+    bottom: 14px;
+    left: 14px;
+    background: transparent;
+    border: 1px solid var(--rule);
+    color: var(--dim);
+    font-size: 15px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Settings panel */
+  .settings-panel {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.78);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  .settings-panel.open { display: flex; }
+
+  .settings-card {
+    background: #121c28;
+    border: 1px solid var(--rule);
+    border-radius: 16px;
+    padding: 22px 24px;
+    width: 90%;
+    max-width: 360px;
+    color: var(--ink);
+  }
+  .settings-card h2 {
+    margin: 0 0 16px 0;
+    font-size: 14px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+  .setting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 14px;
+  }
+  .setting-row:last-of-type { border-bottom: none; }
+
+  .toggle {
+    width: 46px;
+    height: 26px;
+    background: #2a3a4d;
+    border-radius: 999px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .toggle.on { background: var(--accent); }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.2s;
+  }
+  .toggle.on::after { transform: translateX(20px); }
+
+  .settings-input {
+    width: 100%;
+    background: #0c1219;
+    border: 1px solid var(--rule);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 13px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    margin-top: 6px;
+  }
+  .settings-label {
+    font-size: 12px;
+    color: var(--dim);
+    margin-top: 14px;
+  }
+  .settings-close {
+    margin-top: 18px;
+    width: 100%;
+    padding: 10px;
+    background: transparent;
+    border: 1px solid var(--rule);
+    color: var(--dim);
+    font-family: inherit;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    border-radius: 8px;
+    cursor: pointer;
   }
 </style>
 </head>
 <body>
   <h1>Smoker Audio</h1>
 
-  <div class="temps">
+  <div class="temps" id="tempsPanel">
     <div><span class="label">Pit</span><span class="value" id="pit">—</span></div>
     <div><span class="label">Drive</span><span class="value" id="drive">—</span></div>
     <div><span class="label">Rib 1</span><span class="value" id="rib1">—</span></div>
@@ -89,16 +200,50 @@
 
   <div class="controls">
     <button id="toggleBtn">Start</button>
-    <input type="range" id="vol" min="0" max="1" step="0.01" value="0.35">
   </div>
 
   <div class="status" id="status">Tap Start to begin</div>
 
+  <button class="settings-btn" id="settingsBtn" title="Settings">⚙</button>
+  <div class="version">v1.1</div>
+
+  <!-- Settings Panel -->
+  <div class="settings-panel" id="settingsPanel">
+    <div class="settings-card">
+      <h2>Settings</h2>
+
+      <div class="setting-row">
+        <span>Audio</span>
+        <div class="toggle on" id="togAudio"></div>
+      </div>
+      <div class="setting-row">
+        <span>Show numbers</span>
+        <div class="toggle on" id="togNumbers"></div>
+      </div>
+
+      <div class="settings-label">Volume</div>
+      <input type="range" id="vol" min="0" max="1" step="0.01" value="0.35" style="width:100%; margin-top:6px; accent-color:#4a9eff;">
+
+      <div class="settings-label">Home Assistant URL</div>
+      <input class="settings-input" id="haUrl" type="text" placeholder="http://homeassistant.local:8123">
+
+      <div class="settings-label">Long-Lived Token</div>
+      <input class="settings-input" id="haToken" type="password" placeholder="Paste token here">
+
+      <button class="settings-close" id="settingsClose">Close</button>
+    </div>
+  </div>
+
 <script>
 (() => {
-  // ========== CONFIG ==========
-  const HA_URL = "http://homeassistant.local:8123";
-  const HA_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJmZGQ5MTJhZDczMTg0OTdkYjhmMGZjNWY1MjIwYzA4ZCIsImlhdCI6MTc4NjM2MjY0NCwiZXhwIjoyMTAxNzIyNjQ0fQ.kWgx-9mZniZDLqHtDUWMpkxFemlBOlo--obILeQ7y_Q";   // ← paste your token here
+  // ========== DEFAULTS ==========
+  const DEFAULTS = {
+    haUrl: "http://homeassistant.local:8123",
+    haToken: "",
+    audio: true,
+    showNumbers: true,
+    volume: 0.35
+  };
 
   const ENTITIES = {
     pit:      "sensor.14_texas_smoker_vertical_lower_tray",
@@ -109,26 +254,90 @@
     setpoint: "sensor.14_texas_smoker_setpoint"
   };
 
-  const POLL_MS = 35000; // 35 seconds
+  const POLL_MS = 35000;
 
   // ========== STATE ==========
+  let settings = { ...DEFAULTS };
+  try {
+    const saved = JSON.parse(localStorage.getItem("smoker-audio-settings") || "{}");
+    Object.assign(settings, saved);
+  } catch(e) {}
+
   let audioCtx = null;
   let masterGain = null;
   let running = false;
   let values = { pit: 200, rib1: 180, rib2: 180, rib3: 180, drive: 0, setpoint: 180 };
 
-  // Audio nodes
   let droneOsc, droneGain;
   let ribOsc = [null, null, null];
   let ribGain = [null, null, null];
   let noiseSource, noiseFilter, noiseGain;
+
+  // ========== SETTINGS UI ==========
+  function saveSettings() {
+    localStorage.setItem("smoker-audio-settings", JSON.stringify(settings));
+  }
+
+  function applySettings() {
+    document.getElementById("tempsPanel").style.display = settings.showNumbers ? "grid" : "none";
+    document.getElementById("vol").value = settings.volume;
+    document.getElementById("haUrl").value = settings.haUrl;
+    document.getElementById("haToken").value = settings.haToken;
+
+    document.getElementById("togAudio").classList.toggle("on", settings.audio);
+    document.getElementById("togNumbers").classList.toggle("on", settings.showNumbers);
+
+    if (masterGain) {
+      masterGain.gain.setTargetAtTime(settings.audio ? settings.volume : 0, audioCtx?.currentTime || 0, 0.15);
+    }
+  }
+
+  document.getElementById("settingsBtn").addEventListener("click", () => {
+    document.getElementById("settingsPanel").classList.add("open");
+    applySettings();
+  });
+
+  document.getElementById("settingsClose").addEventListener("click", () => {
+    // Save URL + token on close
+    settings.haUrl = document.getElementById("haUrl").value.trim() || DEFAULTS.haUrl;
+    settings.haToken = document.getElementById("haToken").value.trim();
+    settings.volume = parseFloat(document.getElementById("vol").value);
+    saveSettings();
+    applySettings();
+    document.getElementById("settingsPanel").classList.remove("open");
+  });
+
+  document.getElementById("settingsPanel").addEventListener("click", (e) => {
+    if (e.target.id === "settingsPanel") {
+      document.getElementById("settingsClose").click();
+    }
+  });
+
+  document.getElementById("togAudio").addEventListener("click", () => {
+    settings.audio = !settings.audio;
+    saveSettings();
+    applySettings();
+  });
+
+  document.getElementById("togNumbers").addEventListener("click", () => {
+    settings.showNumbers = !settings.showNumbers;
+    saveSettings();
+    applySettings();
+  });
+
+  document.getElementById("vol").addEventListener("input", () => {
+    settings.volume = parseFloat(document.getElementById("vol").value);
+    if (masterGain && settings.audio) {
+      masterGain.gain.setTargetAtTime(settings.volume, audioCtx.currentTime, 0.1);
+    }
+  });
 
   // ========== AUDIO ENGINE ==========
   function initAudio() {
     if (audioCtx) return;
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     masterGain = audioCtx.createGain();
-    masterGain.gain.value = parseFloat(document.getElementById("vol").value);
+    masterGain.gain.value = settings.audio ? settings.volume : 0;
     masterGain.connect(audioCtx.destination);
 
     // Deep drone (pit)
@@ -154,7 +363,7 @@
       ribOsc[i].start();
     }
 
-    // Noise texture (fan / fire activity)
+    // Noise texture (fan)
     const bufferSize = audioCtx.sampleRate * 2;
     const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
     const data = buffer.getChannelData(0);
@@ -181,22 +390,18 @@
   function updateAudio() {
     if (!audioCtx || !running) return;
 
-    // Pit → drone pitch (roughly 45–90 Hz)
     const pit = values.pit || 200;
     const droneFreq = 42 + (pit - 150) * 0.18;
     droneOsc.frequency.setTargetAtTime(Math.max(38, Math.min(95, droneFreq)), audioCtx.currentTime, 1.8);
 
-    // Rib probes → three tones
     const ribs = [values.rib1, values.rib2, values.rib3];
     const base = [108, 136, 162];
     ribs.forEach((t, i) => {
       if (!t) return;
-      // Map ~140–210°F into a useful musical range
       const freq = base[i] + (t - 160) * 0.55;
       ribOsc[i].frequency.setTargetAtTime(Math.max(70, Math.min(280, freq)), audioCtx.currentTime, 1.4);
     });
 
-    // Drive / fan → noise level + brightness
     const drive = Math.max(0, Math.min(100, values.drive || 0));
     const noiseLevel = (drive / 100) * 0.085;
     noiseGain.gain.setTargetAtTime(noiseLevel, audioCtx.currentTime, 1.2);
@@ -205,9 +410,14 @@
 
   // ========== DATA ==========
   async function fetchStates() {
+    if (!settings.haToken) {
+      document.getElementById("status").textContent = "No token set — open Settings";
+      return;
+    }
+
     try {
-      const res = await fetch(`${HA_URL}/api/states`, {
-        headers: { Authorization: `Bearer ${HA_TOKEN}` }
+      const res = await fetch(`${settings.haUrl}/api/states`, {
+        headers: { Authorization: `Bearer ${settings.haToken}` }
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const states = await res.json();
@@ -228,7 +438,6 @@
       values.drive    = num(ENTITIES.drive)    ?? values.drive;
       values.setpoint = num(ENTITIES.setpoint) ?? values.setpoint;
 
-      // Update UI
       document.getElementById("pit").textContent      = values.pit ? values.pit.toFixed(1) + "°" : "—";
       document.getElementById("rib1").textContent     = values.rib1 ? values.rib1.toFixed(1) + "°" : "—";
       document.getElementById("rib2").textContent     = values.rib2 ? values.rib2.toFixed(1) + "°" : "—";
@@ -246,7 +455,6 @@
 
   // ========== UI ==========
   const btn = document.getElementById("toggleBtn");
-  const vol = document.getElementById("vol");
 
   btn.addEventListener("click", async () => {
     if (!running) {
@@ -267,11 +475,8 @@
     }
   });
 
-  vol.addEventListener("input", () => {
-    if (masterGain) {
-      masterGain.gain.setTargetAtTime(parseFloat(vol.value), audioCtx.currentTime, 0.15);
-    }
-  });
+  // Init
+  applySettings();
 })();
 </script>
 </body>
