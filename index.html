@@ -22,27 +22,29 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: 16px;
     user-select: none;
   }
   h1 {
-    font-size: 13px;
+    font-size: 12px;
     letter-spacing: 0.25em;
     color: var(--dim);
     text-transform: uppercase;
-    margin-bottom: 28px;
+    margin-bottom: 20px;
   }
   .temps {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px 24px;
-    margin-bottom: 32px;
-    font-size: 14px;
+    gap: 10px 20px;
+    margin-bottom: 24px;
+    font-size: 13px;
+    width: 100%;
+    max-width: 340px;
   }
   .temps div {
     display: flex;
     justify-content: space-between;
-    gap: 16px;
+    gap: 12px;
   }
   .label { color: var(--dim); }
   .value { color: var(--ink); font-variant-numeric: tabular-nums; }
@@ -66,9 +68,11 @@
     color: var(--accent);
   }
   .status {
-    margin-top: 24px;
+    margin-top: 18px;
     font-size: 12px;
     color: var(--dim);
+    text-align: center;
+    min-height: 18px;
   }
   .version {
     position: absolute;
@@ -95,7 +99,6 @@
   .settings-btn { left: 14px; }
   .help-btn { left: 58px; }
 
-  /* Shared panel styles */
   .panel {
     position: fixed;
     inset: 0;
@@ -133,8 +136,6 @@
     border-bottom: 1px solid var(--rule);
     font-size: 14px;
   }
-  .setting-row:last-of-type { border-bottom: none; }
-
   .toggle {
     width: 46px;
     height: 26px;
@@ -148,10 +149,8 @@
   .toggle::after {
     content: '';
     position: absolute;
-    top: 3px;
-    left: 3px;
-    width: 20px;
-    height: 20px;
+    top: 3px; left: 3px;
+    width: 20px; height: 20px;
     background: white;
     border-radius: 50%;
     transition: transform 0.2s;
@@ -178,10 +177,10 @@
     display: flex;
     gap: 10px;
     align-items: center;
-    margin-top: 8px;
+    margin-top: 7px;
   }
   .label-row span {
-    width: 70px;
+    width: 64px;
     font-size: 12px;
     color: var(--dim);
     flex-shrink: 0;
@@ -193,11 +192,11 @@
     color: var(--ink);
     font-family: inherit;
     font-size: 13px;
-    padding: 7px 9px;
+    padding: 6px 8px;
     border-radius: 7px;
   }
   .panel-close {
-    margin-top: 20px;
+    margin-top: 18px;
     width: 100%;
     padding: 11px;
     background: transparent;
@@ -209,41 +208,28 @@
     border-radius: 8px;
     cursor: pointer;
   }
-
-  /* Help specific */
   .help-item {
-    margin-bottom: 16px;
-    padding-bottom: 14px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
     border-bottom: 1px solid var(--rule);
   }
-  .help-item:last-of-type { border-bottom: none; margin-bottom: 0; }
-  .help-title {
-    font-size: 13px;
-    color: var(--accent);
-    margin-bottom: 4px;
-  }
-  .help-desc {
-    font-size: 13px;
-    color: var(--ink);
-    line-height: 1.45;
-  }
-  .help-note {
-    margin-top: 18px;
-    font-size: 12px;
-    color: var(--dim);
-    line-height: 1.5;
-  }
+  .help-item:last-of-type { border-bottom: none; }
+  .help-title { font-size: 13px; color: var(--accent); margin-bottom: 3px; }
+  .help-desc { font-size: 13px; line-height: 1.45; }
+  .help-note { margin-top: 16px; font-size: 12px; color: var(--dim); line-height: 1.5; }
 </style>
 </head>
 <body>
   <h1>Smoker Audio</h1>
 
   <div class="temps" id="tempsPanel">
-    <div><span class="label" id="label-pit">Pit</span><span class="value" id="pit">—</span></div>
+    <div><span class="label" id="label-air">Air</span><span class="value" id="air">—</span></div>
     <div><span class="label" id="label-drive">Drive</span><span class="value" id="drive">—</span></div>
-    <div><span class="label" id="label-rib1">Rib 1</span><span class="value" id="rib1">—</span></div>
-    <div><span class="label" id="label-rib2">Rib 2</span><span class="value" id="rib2">—</span></div>
-    <div><span class="label" id="label-rib3">Rib 3</span><span class="value" id="rib3">—</span></div>
+    <div><span class="label" id="label-m1">Meat 1</span><span class="value" id="m1">—</span></div>
+    <div><span class="label" id="label-m2">Meat 2</span><span class="value" id="m2">—</span></div>
+    <div><span class="label" id="label-m3">Meat 3</span><span class="value" id="m3">—</span></div>
+    <div><span class="label" id="label-m4">Meat 4</span><span class="value" id="m4">—</span></div>
+    <div><span class="label" id="label-m5">Meat 5</span><span class="value" id="m5">—</span></div>
     <div><span class="label" id="label-setpoint">Setpoint</span><span class="value" id="setpoint">—</span></div>
   </div>
 
@@ -255,7 +241,7 @@
 
   <button class="icon-btn settings-btn" id="settingsBtn" title="Settings">⚙</button>
   <button class="icon-btn help-btn" id="helpBtn" title="Help">?</button>
-  <div class="version">v1.3</div>
+  <div class="version">v1.4</div>
 
   <!-- Settings Panel -->
   <div class="panel" id="settingsPanel">
@@ -280,12 +266,14 @@
       <div class="settings-label">Long-Lived Token</div>
       <input class="settings-input" id="haToken" type="password" placeholder="Paste token here">
 
-      <div class="settings-label" style="margin-top:18px;">Sensor Labels</div>
-      <div class="label-row"><span>Pit</span><input id="lab-pit" type="text"></div>
+      <div class="settings-label" style="margin-top:16px;">Sensor Labels</div>
+      <div class="label-row"><span>Air</span><input id="lab-air" type="text"></div>
       <div class="label-row"><span>Drive</span><input id="lab-drive" type="text"></div>
-      <div class="label-row"><span>Rib 1</span><input id="lab-rib1" type="text"></div>
-      <div class="label-row"><span>Rib 2</span><input id="lab-rib2" type="text"></div>
-      <div class="label-row"><span>Rib 3</span><input id="lab-rib3" type="text"></div>
+      <div class="label-row"><span>Meat 1</span><input id="lab-m1" type="text"></div>
+      <div class="label-row"><span>Meat 2</span><input id="lab-m2" type="text"></div>
+      <div class="label-row"><span>Meat 3</span><input id="lab-m3" type="text"></div>
+      <div class="label-row"><span>Meat 4</span><input id="lab-m4" type="text"></div>
+      <div class="label-row"><span>Meat 5</span><input id="lab-m5" type="text"></div>
       <div class="label-row"><span>Setpoint</span><input id="lab-setpoint" type="text"></div>
 
       <button class="panel-close" id="settingsClose">Close</button>
@@ -299,31 +287,23 @@
 
       <div class="help-item">
         <div class="help-title">Deep drone</div>
-        <div class="help-desc">Pit / Airstream temperature. Pitch rises as the pit gets hotter.</div>
+        <div class="help-desc">Air / pit temperature. Pitch follows the air temp. Rising or falling produces a gentle bend and brightness change (notice).</div>
       </div>
-
       <div class="help-item">
-        <div class="help-title">Soft mid tone</div>
-        <div class="help-desc">Rib probe 1. Tracks that probe’s temperature.</div>
+        <div class="help-title">Five soft tones</div>
+        <div class="help-desc">The five meat probes. Equal weight, different pitches. They create beating when the racks differ.</div>
       </div>
-
       <div class="help-item">
-        <div class="help-title">Second mid tone</div>
-        <div class="help-desc">Rib probe 2. Creates gentle beating when it differs from probe 1.</div>
+        <div class="help-title">Noise texture</div>
+        <div class="help-desc">Drive / fan output. Grows with fan speed.</div>
       </div>
-
       <div class="help-item">
-        <div class="help-title">Higher quieter tone</div>
-        <div class="help-desc">Rib probe 3. Adds density and moves with the third rack.</div>
-      </div>
-
-      <div class="help-item">
-        <div class="help-title">Noise / texture</div>
-        <div class="help-desc">Drive (fan) output. Grows louder and brighter when the fan runs harder.</div>
+        <div class="help-title">Falling below 180 °F</div>
+        <div class="help-desc">The falling notice on the air drone becomes stronger and more frequent.</div>
       </div>
 
       <div class="help-note">
-        The texture is designed to stay low and continuous. Once you learn it, you can hear the state of the cook without looking at the numbers.
+        Notices are variations of the existing air tone, not separate alert sounds. The texture is meant to stay continuous and low.
       </div>
 
       <button class="panel-close" id="helpClose">Close</button>
@@ -332,7 +312,6 @@
 
 <script>
 (() => {
-  // ========== DEFAULTS ==========
   const DEFAULTS = {
     haUrl: "http://homeassistant.local:8123",
     haToken: "",
@@ -340,27 +319,30 @@
     showNumbers: true,
     volume: 0.35,
     labels: {
-      pit: "Pit",
-      drive: "Drive",
-      rib1: "Rib 1",
-      rib2: "Rib 2",
-      rib3: "Rib 3",
+      air: "Air", drive: "Drive",
+      m1: "Meat 1", m2: "Meat 2", m3: "Meat 3", m4: "Meat 4", m5: "Meat 5",
       setpoint: "Setpoint"
     }
   };
 
+  // Map the six temperature roles to your current entities.
+  // Air = convective / pit. The other five are meat probes.
+  // You can re-assign these later in code if the physical probes move.
   const ENTITIES = {
-    pit:      "sensor.14_texas_smoker_vertical_lower_tray",
-    rib1:     "sensor.14_texas_smoker_v_m_shelf_center",
-    rib2:     "sensor.14_texas_smoker_v_middle_left",
-    rib3:     "sensor.14_texas_smoker_middle_r",
+    air:      "sensor.14_texas_smoker_vertical_lower_tray",
+    m1:       "sensor.14_texas_smoker_v_m_shelf_center",
+    m2:       "sensor.14_texas_smoker_v_middle_left",
+    m3:       "sensor.14_texas_smoker_middle_r",
+    m4:       "sensor.14_texas_smoker_v_m_shelf_center", // placeholder – change when you have a 4th probe
+    m5:       "sensor.14_texas_smoker_v_middle_left",    // placeholder – change when you have a 5th probe
     drive:    "sensor.14_texas_smoker_drive_output",
     setpoint: "sensor.14_texas_smoker_setpoint"
   };
 
   const POLL_MS = 35000;
+  const TREND_THRESHOLD = 1.2;   // °F change to count as rising/falling
+  const LOW_AIR = 180;
 
-  // ========== STATE ==========
   let settings = JSON.parse(JSON.stringify(DEFAULTS));
   try {
     const saved = JSON.parse(localStorage.getItem("smoker-audio-settings") || "{}");
@@ -368,17 +350,17 @@
     if (saved.labels) Object.assign(settings.labels, saved.labels);
   } catch(e) {}
 
-  let audioCtx = null;
-  let masterGain = null;
-  let running = false;
-  let values = { pit: 200, rib1: 180, rib2: 180, rib3: 180, drive: 0, setpoint: 180 };
+  let audioCtx = null, masterGain = null, running = false;
+  let values = { air: 200, m1: 170, m2: 170, m3: 170, m4: 170, m5: 170, drive: 0, setpoint: 180 };
+  let prevAir = null;
+  let airTrend = 0; // -1 falling, 0 steady, +1 rising
+  let lastNoticeAt = 0;
 
-  let droneOsc, droneGain;
-  let ribOsc = [null, null, null];
-  let ribGain = [null, null, null];
+  let droneOsc, droneGain, droneFilter;
+  let meatOsc = [], meatGain = [];
   let noiseSource, noiseFilter, noiseGain;
+  let noticeOsc = null, noticeGain = null;
 
-  // ========== SETTINGS UI ==========
   function saveSettings() {
     localStorage.setItem("smoker-audio-settings", JSON.stringify(settings));
   }
@@ -389,86 +371,53 @@
     if (masterGain) {
       masterGain.gain.setTargetAtTime(settings.audio ? settings.volume : 0, audioCtx?.currentTime || 0, 0.15);
     }
-
     document.getElementById("haUrl").value = settings.haUrl;
     document.getElementById("haToken").value = settings.haToken;
-
     document.getElementById("togAudio").classList.toggle("on", settings.audio);
     document.getElementById("togNumbers").classList.toggle("on", settings.showNumbers);
 
-    document.getElementById("lab-pit").value = settings.labels.pit;
-    document.getElementById("lab-drive").value = settings.labels.drive;
-    document.getElementById("lab-rib1").value = settings.labels.rib1;
-    document.getElementById("lab-rib2").value = settings.labels.rib2;
-    document.getElementById("lab-rib3").value = settings.labels.rib3;
-    document.getElementById("lab-setpoint").value = settings.labels.setpoint;
-
-    document.getElementById("label-pit").textContent = settings.labels.pit;
-    document.getElementById("label-drive").textContent = settings.labels.drive;
-    document.getElementById("label-rib1").textContent = settings.labels.rib1;
-    document.getElementById("label-rib2").textContent = settings.labels.rib2;
-    document.getElementById("label-rib3").textContent = settings.labels.rib3;
-    document.getElementById("label-setpoint").textContent = settings.labels.setpoint;
+    ["air","drive","m1","m2","m3","m4","m5","setpoint"].forEach(k => {
+      const lab = document.getElementById("lab-" + k);
+      if (lab) lab.value = settings.labels[k];
+      const disp = document.getElementById("label-" + k);
+      if (disp) disp.textContent = settings.labels[k];
+    });
   }
 
-  // Settings open/close
-  document.getElementById("settingsBtn").addEventListener("click", () => {
+  // UI listeners
+  document.getElementById("settingsBtn").onclick = () => {
     document.getElementById("settingsPanel").classList.add("open");
     applySettings();
-  });
-
-  document.getElementById("settingsClose").addEventListener("click", () => {
+  };
+  document.getElementById("settingsClose").onclick = () => {
     settings.haUrl = document.getElementById("haUrl").value.trim() || DEFAULTS.haUrl;
     settings.haToken = document.getElementById("haToken").value.trim();
     settings.volume = parseFloat(document.getElementById("vol").value);
-
-    settings.labels.pit = document.getElementById("lab-pit").value.trim() || "Pit";
-    settings.labels.drive = document.getElementById("lab-drive").value.trim() || "Drive";
-    settings.labels.rib1 = document.getElementById("lab-rib1").value.trim() || "Rib 1";
-    settings.labels.rib2 = document.getElementById("lab-rib2").value.trim() || "Rib 2";
-    settings.labels.rib3 = document.getElementById("lab-rib3").value.trim() || "Rib 3";
-    settings.labels.setpoint = document.getElementById("lab-setpoint").value.trim() || "Setpoint";
-
+    ["air","drive","m1","m2","m3","m4","m5","setpoint"].forEach(k => {
+      settings.labels[k] = document.getElementById("lab-" + k).value.trim() || DEFAULTS.labels[k];
+    });
     saveSettings();
     applySettings();
     document.getElementById("settingsPanel").classList.remove("open");
-  });
-
-  document.getElementById("settingsPanel").addEventListener("click", (e) => {
+  };
+  document.getElementById("settingsPanel").onclick = e => {
     if (e.target.id === "settingsPanel") document.getElementById("settingsClose").click();
-  });
+  };
 
-  // Help open/close
-  document.getElementById("helpBtn").addEventListener("click", () => {
-    document.getElementById("helpPanel").classList.add("open");
-  });
-  document.getElementById("helpClose").addEventListener("click", () => {
-    document.getElementById("helpPanel").classList.remove("open");
-  });
-  document.getElementById("helpPanel").addEventListener("click", (e) => {
+  document.getElementById("helpBtn").onclick = () => document.getElementById("helpPanel").classList.add("open");
+  document.getElementById("helpClose").onclick = () => document.getElementById("helpPanel").classList.remove("open");
+  document.getElementById("helpPanel").onclick = e => {
     if (e.target.id === "helpPanel") document.getElementById("helpClose").click();
-  });
+  };
 
-  document.getElementById("togAudio").addEventListener("click", () => {
-    settings.audio = !settings.audio;
-    saveSettings();
-    applySettings();
-  });
-
-  document.getElementById("togNumbers").addEventListener("click", () => {
-    settings.showNumbers = !settings.showNumbers;
-    saveSettings();
-    applySettings();
-  });
-
-  document.getElementById("vol").addEventListener("input", () => {
+  document.getElementById("togAudio").onclick = () => { settings.audio = !settings.audio; saveSettings(); applySettings(); };
+  document.getElementById("togNumbers").onclick = () => { settings.showNumbers = !settings.showNumbers; saveSettings(); applySettings(); };
+  document.getElementById("vol").oninput = () => {
     settings.volume = parseFloat(document.getElementById("vol").value);
-    if (masterGain && settings.audio) {
-      masterGain.gain.setTargetAtTime(settings.volume, audioCtx.currentTime, 0.1);
-    }
-  });
+    if (masterGain && settings.audio) masterGain.gain.setTargetAtTime(settings.volume, audioCtx.currentTime, 0.1);
+  };
 
-  // ========== AUDIO ENGINE ==========
+  // ========== AUDIO ==========
   function initAudio() {
     if (audioCtx) return;
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -476,99 +425,116 @@
     masterGain.gain.value = settings.audio ? settings.volume : 0;
     masterGain.connect(audioCtx.destination);
 
+    // Air drone
     droneOsc = audioCtx.createOscillator();
     droneGain = audioCtx.createGain();
+    droneFilter = audioCtx.createBiquadFilter();
     droneOsc.type = "sine";
-    droneOsc.frequency.value = 55;
-    droneGain.gain.value = 0.22;
-    droneOsc.connect(droneGain);
+    droneOsc.frequency.value = 52;
+    droneFilter.type = "lowpass";
+    droneFilter.frequency.value = 400;
+    droneGain.gain.value = 0.20;
+    droneOsc.connect(droneFilter);
+    droneFilter.connect(droneGain);
     droneGain.connect(masterGain);
     droneOsc.start();
 
-    const baseFreqs = [110, 138, 164];
-    for (let i = 0; i < 3; i++) {
-      ribOsc[i] = audioCtx.createOscillator();
-      ribGain[i] = audioCtx.createGain();
-      ribOsc[i].type = i === 0 ? "triangle" : "sine";
-      ribOsc[i].frequency.value = baseFreqs[i];
-      ribGain[i].gain.value = 0.07 - i * 0.015;
-      ribOsc[i].connect(ribGain[i]);
-      ribGain[i].connect(masterGain);
-      ribOsc[i].start();
+    // Five equal meat tones
+    const bases = [104, 123, 141, 160, 178];
+    for (let i = 0; i < 5; i++) {
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = "sine";
+      o.frequency.value = bases[i];
+      g.gain.value = 0.045;
+      o.connect(g);
+      g.connect(masterGain);
+      o.start();
+      meatOsc.push(o);
+      meatGain.push(g);
     }
 
+    // Fan noise
     const bufferSize = audioCtx.sampleRate * 2;
     const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
     const data = buffer.getChannelData(0);
     for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-
     noiseSource = audioCtx.createBufferSource();
     noiseSource.buffer = buffer;
     noiseSource.loop = true;
-
     noiseFilter = audioCtx.createBiquadFilter();
     noiseFilter.type = "bandpass";
-    noiseFilter.frequency.value = 800;
-    noiseFilter.Q.value = 0.7;
-
+    noiseFilter.frequency.value = 700;
+    noiseFilter.Q.value = 0.6;
     noiseGain = audioCtx.createGain();
-    noiseGain.gain.value = 0.0;
-
+    noiseGain.gain.value = 0;
     noiseSource.connect(noiseFilter);
     noiseFilter.connect(noiseGain);
     noiseGain.connect(masterGain);
     noiseSource.start();
   }
 
-  function updateAudio() {
-    if (!audioCtx || !running) return;
+  function playNotice(direction, strong) {
+    if (!audioCtx || !settings.audio) return;
+    const now = audioCtx.currentTime;
+    const base = droneOsc.frequency.value;
 
-    const pit = values.pit || 200;
-    const droneFreq = 42 + (pit - 150) * 0.18;
-    droneOsc.frequency.setTargetAtTime(Math.max(38, Math.min(95, droneFreq)), audioCtx.currentTime, 1.8);
+    // Temporary pitch + filter movement on the existing drone
+    const bend = direction > 0 ? (strong ? 7 : 4) : (strong ? -8 : -4);
+    const bright = direction > 0 ? (strong ? 900 : 650) : (strong ? 220 : 300);
 
-    const ribs = [values.rib1, values.rib2, values.rib3];
-    const base = [108, 136, 162];
-    ribs.forEach((t, i) => {
-      if (!t) return;
-      const freq = base[i] + (t - 160) * 0.55;
-      ribOsc[i].frequency.setTargetAtTime(Math.max(70, Math.min(280, freq)), audioCtx.currentTime, 1.4);
-    });
+    droneOsc.frequency.cancelScheduledValues(now);
+    droneOsc.frequency.setValueAtTime(base, now);
+    droneOsc.frequency.linearRampToValueAtTime(base + bend, now + 0.35);
+    droneOsc.frequency.linearRampToValueAtTime(base, now + 1.1);
 
-    const drive = Math.max(0, Math.min(100, values.drive || 0));
-    const noiseLevel = (drive / 100) * 0.085;
-    noiseGain.gain.setTargetAtTime(noiseLevel, audioCtx.currentTime, 1.2);
-    noiseFilter.frequency.setTargetAtTime(500 + drive * 12, audioCtx.currentTime, 1.5);
+    droneFilter.frequency.cancelScheduledValues(now);
+    droneFilter.frequency.setValueAtTime(droneFilter.frequency.value, now);
+    droneFilter.frequency.linearRampToValueAtTime(bright, now + 0.3);
+    droneFilter.frequency.linearRampToValueAtTime(400, now + 1.2);
   }
 
-  // ========== DATA ==========
+  function updateAudio() {
+    if (!audioCtx || !running) return;
+    const t = audioCtx.currentTime;
+
+    // Air drone base pitch
+    const air = values.air || 200;
+    const freq = 40 + (air - 140) * 0.16;
+    droneOsc.frequency.setTargetAtTime(Math.max(36, Math.min(90, freq)), t, 2.0);
+
+    // Meat tones
+    const meats = [values.m1, values.m2, values.m3, values.m4, values.m5];
+    const bases = [100, 118, 136, 154, 172];
+    meats.forEach((temp, i) => {
+      if (temp == null) return;
+      const f = bases[i] + (temp - 150) * 0.45;
+      meatOsc[i].frequency.setTargetAtTime(Math.max(70, Math.min(260, f)), t, 1.6);
+    });
+
+    // Fan
+    const drive = Math.max(0, Math.min(100, values.drive || 0));
+    noiseGain.gain.setTargetAtTime((drive / 100) * 0.08, t, 1.3);
+    noiseFilter.frequency.setTargetAtTime(480 + drive * 11, t, 1.4);
+  }
+
+  // ========== DATA + TREND ==========
   async function fetchStates() {
     if (!settings.haToken) {
       document.getElementById("status").textContent = "No token set — open Settings";
       return;
     }
-
     try {
       const res = await fetch(`${settings.haUrl}/api/states`, {
         headers: { Authorization: `Bearer ${settings.haToken}` }
       });
-
-      if (res.status === 401) {
-        document.getElementById("status").textContent = "Invalid token — check Settings";
-        return;
-      }
-      if (res.status === 404) {
-        document.getElementById("status").textContent = "Home Assistant not found — check URL";
-        return;
-      }
-      if (!res.ok) {
-        document.getElementById("status").textContent = `Error: HTTP ${res.status}`;
-        return;
-      }
+      if (res.status === 401) { document.getElementById("status").textContent = "Invalid token — check Settings"; return; }
+      if (res.status === 404) { document.getElementById("status").textContent = "Home Assistant not found — check URL"; return; }
+      if (!res.ok) { document.getElementById("status").textContent = `Error: HTTP ${res.status}`; return; }
 
       const states = await res.json();
       const map = {};
-      states.forEach(s => { map[s.entity_id] = s; });
+      states.forEach(s => map[s.entity_id] = s);
 
       function num(id) {
         const s = map[id];
@@ -576,53 +542,79 @@
         return parseFloat(s.state);
       }
 
-      values.pit      = num(ENTITIES.pit)      ?? values.pit;
-      values.rib1     = num(ENTITIES.rib1)     ?? values.rib1;
-      values.rib2     = num(ENTITIES.rib2)     ?? values.rib2;
-      values.rib3     = num(ENTITIES.rib3)     ?? values.rib3;
-      values.drive    = num(ENTITIES.drive)    ?? values.drive;
+      const newAir = num(ENTITIES.air);
+      values.m1 = num(ENTITIES.m1) ?? values.m1;
+      values.m2 = num(ENTITIES.m2) ?? values.m2;
+      values.m3 = num(ENTITIES.m3) ?? values.m3;
+      values.m4 = num(ENTITIES.m4) ?? values.m4;
+      values.m5 = num(ENTITIES.m5) ?? values.m5;
+      values.drive = num(ENTITIES.drive) ?? values.drive;
       values.setpoint = num(ENTITIES.setpoint) ?? values.setpoint;
 
-      document.getElementById("pit").textContent      = values.pit ? values.pit.toFixed(1) + "°" : "—";
-      document.getElementById("rib1").textContent     = values.rib1 ? values.rib1.toFixed(1) + "°" : "—";
-      document.getElementById("rib2").textContent     = values.rib2 ? values.rib2.toFixed(1) + "°" : "—";
-      document.getElementById("rib3").textContent     = values.rib3 ? values.rib3.toFixed(1) + "°" : "—";
-      document.getElementById("drive").textContent    = values.drive !== null ? values.drive + "%" : "—";
+      // Trend detection on air
+      if (newAir != null) {
+        if (prevAir != null) {
+          const delta = newAir - prevAir;
+          if (delta >= TREND_THRESHOLD) airTrend = 1;
+          else if (delta <= -TREND_THRESHOLD) airTrend = -1;
+          else airTrend = 0;
+
+          // Notices
+          const now = Date.now();
+          const below = newAir < LOW_AIR;
+          const interval = (airTrend < 0 && below) ? 45000 : 90000; // more frequent when falling + cold
+
+          if (airTrend !== 0 && (now - lastNoticeAt > interval)) {
+            playNotice(airTrend, airTrend < 0 && below);
+            lastNoticeAt = now;
+            const msg = airTrend > 0 ? "Air rising" : (below ? "Air falling (low)" : "Air falling");
+            document.getElementById("status").textContent = msg;
+          }
+        }
+        prevAir = newAir;
+        values.air = newAir;
+      }
+
+      // UI
+      document.getElementById("air").textContent = values.air ? values.air.toFixed(1) + "°" : "—";
+      document.getElementById("m1").textContent = values.m1 ? values.m1.toFixed(1) + "°" : "—";
+      document.getElementById("m2").textContent = values.m2 ? values.m2.toFixed(1) + "°" : "—";
+      document.getElementById("m3").textContent = values.m3 ? values.m3.toFixed(1) + "°" : "—";
+      document.getElementById("m4").textContent = values.m4 ? values.m4.toFixed(1) + "°" : "—";
+      document.getElementById("m5").textContent = values.m5 ? values.m5.toFixed(1) + "°" : "—";
+      document.getElementById("drive").textContent = values.drive != null ? values.drive + "%" : "—";
       document.getElementById("setpoint").textContent = values.setpoint ? values.setpoint.toFixed(0) + "°" : "—";
 
-      document.getElementById("status").textContent = "Live · " + new Date().toLocaleTimeString();
+      if (airTrend === 0) {
+        document.getElementById("status").textContent = "Live · " + new Date().toLocaleTimeString();
+      }
       updateAudio();
     } catch (err) {
-      if (err.name === "TypeError") {
-        document.getElementById("status").textContent = "Cannot reach Home Assistant — check URL / network";
-      } else {
-        document.getElementById("status").textContent = "Error: " + err.message;
-      }
-      console.error(err);
+      document.getElementById("status").textContent = err.name === "TypeError"
+        ? "Cannot reach Home Assistant — check URL / network"
+        : "Error: " + err.message;
     }
   }
 
-  // ========== UI ==========
-  const btn = document.getElementById("toggleBtn");
-
-  btn.addEventListener("click", async () => {
+  // Start / Stop
+  document.getElementById("toggleBtn").onclick = async () => {
     if (!running) {
       initAudio();
       if (audioCtx.state === "suspended") await audioCtx.resume();
       running = true;
-      btn.textContent = "Stop";
-      btn.classList.add("active");
+      document.getElementById("toggleBtn").textContent = "Stop";
+      document.getElementById("toggleBtn").classList.add("active");
       document.getElementById("status").textContent = "Starting…";
       fetchStates();
       setInterval(fetchStates, POLL_MS);
     } else {
       running = false;
-      btn.textContent = "Start";
-      btn.classList.remove("active");
+      document.getElementById("toggleBtn").textContent = "Start";
+      document.getElementById("toggleBtn").classList.remove("active");
       if (masterGain) masterGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.4);
       document.getElementById("status").textContent = "Stopped";
     }
-  });
+  };
 
   applySettings();
 })();
