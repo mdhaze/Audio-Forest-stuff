@@ -22,7 +22,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 16px;
+    padding: 14px;
     user-select: none;
   }
   h1 {
@@ -30,24 +30,36 @@
     letter-spacing: 0.25em;
     color: var(--dim);
     text-transform: uppercase;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
   }
   .temps {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 10px 20px;
-    margin-bottom: 24px;
-    font-size: 13px;
+    gap: 8px 18px;
+    margin-bottom: 18px;
+    font-size: 12.5px;
     width: 100%;
-    max-width: 340px;
+    max-width: 360px;
   }
   .temps div {
     display: flex;
     justify-content: space-between;
-    gap: 12px;
+    gap: 10px;
   }
   .label { color: var(--dim); }
   .value { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .heat {
+    grid-column: 1 / -1;
+    margin-top: 6px;
+    padding-top: 8px;
+    border-top: 1px solid var(--rule);
+    font-size: 11.5px;
+  }
+  .heat-row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+  }
   .controls {
     display: flex;
     gap: 14px;
@@ -68,7 +80,7 @@
     color: var(--accent);
   }
   .status {
-    margin-top: 18px;
+    margin-top: 16px;
     font-size: 12px;
     color: var(--dim);
     text-align: center;
@@ -231,17 +243,27 @@
     <div><span class="label" id="label-m4">Meat 4</span><span class="value" id="m4">—</span></div>
     <div><span class="label" id="label-m5">Meat 5</span><span class="value" id="m5">—</span></div>
     <div><span class="label" id="label-setpoint">Setpoint</span><span class="value" id="setpoint">—</span></div>
+
+    <div class="heat" id="heatPanel">
+      <div style="color:var(--dim); margin-bottom:4px;">Total Heat (°F·min)</div>
+      <div class="heat-row"><span id="hl-m1">Meat 1</span><span id="h-m1">0</span></div>
+      <div class="heat-row"><span id="hl-m2">Meat 2</span><span id="h-m2">0</span></div>
+      <div class="heat-row"><span id="hl-m3">Meat 3</span><span id="h-m3">0</span></div>
+      <div class="heat-row"><span id="hl-m4">Meat 4</span><span id="h-m4">0</span></div>
+      <div class="heat-row"><span id="hl-m5">Meat 5</span><span id="h-m5">0</span></div>
+    </div>
   </div>
 
   <div class="controls">
     <button id="toggleBtn">Start</button>
+    <button id="resetHeatBtn" style="font-size:12px;">Reset Heat</button>
   </div>
 
   <div class="status" id="status">Tap Start to begin</div>
 
   <button class="icon-btn settings-btn" id="settingsBtn" title="Settings">⚙</button>
   <button class="icon-btn help-btn" id="helpBtn" title="Help">?</button>
-  <div class="version">v1.4</div>
+  <div class="version">v1.5</div>
 
   <!-- Settings Panel -->
   <div class="panel" id="settingsPanel">
@@ -287,15 +309,19 @@
 
       <div class="help-item">
         <div class="help-title">Deep drone</div>
-        <div class="help-desc">Air / pit temperature. Pitch follows the air temp. Rising or falling produces a gentle bend and brightness change (notice).</div>
+        <div class="help-desc">Air / pit temperature. Pitch follows the air temp. Rising or falling produces a gentle bend (notice).</div>
       </div>
       <div class="help-item">
         <div class="help-title">Five soft tones</div>
-        <div class="help-desc">The five meat probes. Equal weight, different pitches. They create beating when the racks differ.</div>
+        <div class="help-desc">The five meat probes. Equal weight, different pitches.</div>
       </div>
       <div class="help-item">
         <div class="help-title">Noise texture</div>
         <div class="help-desc">Drive / fan output. Grows with fan speed.</div>
+      </div>
+      <div class="help-item">
+        <div class="help-title">Total Heat</div>
+        <div class="help-desc">Running integral of temperature × time (°F·minutes) for each meat probe. Use it to equalize doneness across racks.</div>
       </div>
       <div class="help-item">
         <div class="help-title">Falling below 180 °F</div>
@@ -303,7 +329,7 @@
       </div>
 
       <div class="help-note">
-        Notices are variations of the existing air tone, not separate alert sounds. The texture is meant to stay continuous and low.
+        Notices are variations of the existing air tone. Total Heat is accumulated only while the page is running.
       </div>
 
       <button class="panel-close" id="helpClose">Close</button>
@@ -325,22 +351,19 @@
     }
   };
 
-  // Map the six temperature roles to your current entities.
-  // Air = convective / pit. The other five are meat probes.
-  // You can re-assign these later in code if the physical probes move.
   const ENTITIES = {
     air:      "sensor.14_texas_smoker_vertical_lower_tray",
     m1:       "sensor.14_texas_smoker_v_m_shelf_center",
     m2:       "sensor.14_texas_smoker_v_middle_left",
     m3:       "sensor.14_texas_smoker_middle_r",
-    m4:       "sensor.14_texas_smoker_v_m_shelf_center", // placeholder – change when you have a 4th probe
-    m5:       "sensor.14_texas_smoker_v_middle_left",    // placeholder – change when you have a 5th probe
+    m4:       "sensor.14_texas_smoker_v_m_shelf_center", // update when you have real 4th probe
+    m5:       "sensor.14_texas_smoker_v_middle_left",    // update when you have real 5th probe
     drive:    "sensor.14_texas_smoker_drive_output",
     setpoint: "sensor.14_texas_smoker_setpoint"
   };
 
   const POLL_MS = 35000;
-  const TREND_THRESHOLD = 1.2;   // °F change to count as rising/falling
+  const TREND_THRESHOLD = 1.2;
   const LOW_AIR = 180;
 
   let settings = JSON.parse(JSON.stringify(DEFAULTS));
@@ -352,14 +375,15 @@
 
   let audioCtx = null, masterGain = null, running = false;
   let values = { air: 200, m1: 170, m2: 170, m3: 170, m4: 170, m5: 170, drive: 0, setpoint: 180 };
+  let totalHeat = { m1: 0, m2: 0, m3: 0, m4: 0, m5: 0 };
+  let lastSampleTime = null;
   let prevAir = null;
-  let airTrend = 0; // -1 falling, 0 steady, +1 rising
+  let airTrend = 0;
   let lastNoticeAt = 0;
 
   let droneOsc, droneGain, droneFilter;
   let meatOsc = [], meatGain = [];
   let noiseSource, noiseFilter, noiseGain;
-  let noticeOsc = null, noticeGain = null;
 
   function saveSettings() {
     localStorage.setItem("smoker-audio-settings", JSON.stringify(settings));
@@ -381,10 +405,12 @@
       if (lab) lab.value = settings.labels[k];
       const disp = document.getElementById("label-" + k);
       if (disp) disp.textContent = settings.labels[k];
+      const hl = document.getElementById("hl-" + k);
+      if (hl) hl.textContent = settings.labels[k];
     });
   }
 
-  // UI listeners
+  // UI
   document.getElementById("settingsBtn").onclick = () => {
     document.getElementById("settingsPanel").classList.add("open");
     applySettings();
@@ -417,6 +443,12 @@
     if (masterGain && settings.audio) masterGain.gain.setTargetAtTime(settings.volume, audioCtx.currentTime, 0.1);
   };
 
+  document.getElementById("resetHeatBtn").onclick = () => {
+    totalHeat = { m1: 0, m2: 0, m3: 0, m4: 0, m5: 0 };
+    lastSampleTime = Date.now();
+    updateHeatDisplay();
+  };
+
   // ========== AUDIO ==========
   function initAudio() {
     if (audioCtx) return;
@@ -425,7 +457,6 @@
     masterGain.gain.value = settings.audio ? settings.volume : 0;
     masterGain.connect(audioCtx.destination);
 
-    // Air drone
     droneOsc = audioCtx.createOscillator();
     droneGain = audioCtx.createGain();
     droneFilter = audioCtx.createBiquadFilter();
@@ -439,7 +470,6 @@
     droneGain.connect(masterGain);
     droneOsc.start();
 
-    // Five equal meat tones
     const bases = [104, 123, 141, 160, 178];
     for (let i = 0; i < 5; i++) {
       const o = audioCtx.createOscillator();
@@ -454,7 +484,6 @@
       meatGain.push(g);
     }
 
-    // Fan noise
     const bufferSize = audioCtx.sampleRate * 2;
     const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
     const data = buffer.getChannelData(0);
@@ -478,8 +507,6 @@
     if (!audioCtx || !settings.audio) return;
     const now = audioCtx.currentTime;
     const base = droneOsc.frequency.value;
-
-    // Temporary pitch + filter movement on the existing drone
     const bend = direction > 0 ? (strong ? 7 : 4) : (strong ? -8 : -4);
     const bright = direction > 0 ? (strong ? 900 : 650) : (strong ? 220 : 300);
 
@@ -498,12 +525,10 @@
     if (!audioCtx || !running) return;
     const t = audioCtx.currentTime;
 
-    // Air drone base pitch
     const air = values.air || 200;
     const freq = 40 + (air - 140) * 0.16;
     droneOsc.frequency.setTargetAtTime(Math.max(36, Math.min(90, freq)), t, 2.0);
 
-    // Meat tones
     const meats = [values.m1, values.m2, values.m3, values.m4, values.m5];
     const bases = [100, 118, 136, 154, 172];
     meats.forEach((temp, i) => {
@@ -512,13 +537,20 @@
       meatOsc[i].frequency.setTargetAtTime(Math.max(70, Math.min(260, f)), t, 1.6);
     });
 
-    // Fan
     const drive = Math.max(0, Math.min(100, values.drive || 0));
     noiseGain.gain.setTargetAtTime((drive / 100) * 0.08, t, 1.3);
     noiseFilter.frequency.setTargetAtTime(480 + drive * 11, t, 1.4);
   }
 
-  // ========== DATA + TREND ==========
+  function updateHeatDisplay() {
+    document.getElementById("h-m1").textContent = Math.round(totalHeat.m1).toLocaleString();
+    document.getElementById("h-m2").textContent = Math.round(totalHeat.m2).toLocaleString();
+    document.getElementById("h-m3").textContent = Math.round(totalHeat.m3).toLocaleString();
+    document.getElementById("h-m4").textContent = Math.round(totalHeat.m4).toLocaleString();
+    document.getElementById("h-m5").textContent = Math.round(totalHeat.m5).toLocaleString();
+  }
+
+  // ========== DATA ==========
   async function fetchStates() {
     if (!settings.haToken) {
       document.getElementById("status").textContent = "No token set — open Settings";
@@ -542,16 +574,37 @@
         return parseFloat(s.state);
       }
 
+      const now = Date.now();
       const newAir = num(ENTITIES.air);
-      values.m1 = num(ENTITIES.m1) ?? values.m1;
-      values.m2 = num(ENTITIES.m2) ?? values.m2;
-      values.m3 = num(ENTITIES.m3) ?? values.m3;
-      values.m4 = num(ENTITIES.m4) ?? values.m4;
-      values.m5 = num(ENTITIES.m5) ?? values.m5;
+      const newM = {
+        m1: num(ENTITIES.m1),
+        m2: num(ENTITIES.m2),
+        m3: num(ENTITIES.m3),
+        m4: num(ENTITIES.m4),
+        m5: num(ENTITIES.m5)
+      };
+
+      // Total Heat accumulation
+      if (lastSampleTime != null) {
+        const deltaMin = (now - lastSampleTime) / 60000;
+        ["m1","m2","m3","m4","m5"].forEach(k => {
+          const t = newM[k];
+          if (t != null && t > 50) {          // ignore clearly invalid readings
+            totalHeat[k] += t * deltaMin;
+          }
+        });
+      }
+      lastSampleTime = now;
+
+      values.m1 = newM.m1 ?? values.m1;
+      values.m2 = newM.m2 ?? values.m2;
+      values.m3 = newM.m3 ?? values.m3;
+      values.m4 = newM.m4 ?? values.m4;
+      values.m5 = newM.m5 ?? values.m5;
       values.drive = num(ENTITIES.drive) ?? values.drive;
       values.setpoint = num(ENTITIES.setpoint) ?? values.setpoint;
 
-      // Trend detection on air
+      // Air trend + notices
       if (newAir != null) {
         if (prevAir != null) {
           const delta = newAir - prevAir;
@@ -559,23 +612,21 @@
           else if (delta <= -TREND_THRESHOLD) airTrend = -1;
           else airTrend = 0;
 
-          // Notices
-          const now = Date.now();
           const below = newAir < LOW_AIR;
-          const interval = (airTrend < 0 && below) ? 45000 : 90000; // more frequent when falling + cold
+          const interval = (airTrend < 0 && below) ? 45000 : 90000;
 
           if (airTrend !== 0 && (now - lastNoticeAt > interval)) {
             playNotice(airTrend, airTrend < 0 && below);
             lastNoticeAt = now;
-            const msg = airTrend > 0 ? "Air rising" : (below ? "Air falling (low)" : "Air falling");
-            document.getElementById("status").textContent = msg;
+            document.getElementById("status").textContent =
+              airTrend > 0 ? "Air rising" : (below ? "Air falling (low)" : "Air falling");
           }
         }
         prevAir = newAir;
         values.air = newAir;
       }
 
-      // UI
+      // UI update
       document.getElementById("air").textContent = values.air ? values.air.toFixed(1) + "°" : "—";
       document.getElementById("m1").textContent = values.m1 ? values.m1.toFixed(1) + "°" : "—";
       document.getElementById("m2").textContent = values.m2 ? values.m2.toFixed(1) + "°" : "—";
@@ -584,6 +635,8 @@
       document.getElementById("m5").textContent = values.m5 ? values.m5.toFixed(1) + "°" : "—";
       document.getElementById("drive").textContent = values.drive != null ? values.drive + "%" : "—";
       document.getElementById("setpoint").textContent = values.setpoint ? values.setpoint.toFixed(0) + "°" : "—";
+
+      updateHeatDisplay();
 
       if (airTrend === 0) {
         document.getElementById("status").textContent = "Live · " + new Date().toLocaleTimeString();
@@ -602,6 +655,7 @@
       initAudio();
       if (audioCtx.state === "suspended") await audioCtx.resume();
       running = true;
+      lastSampleTime = Date.now();
       document.getElementById("toggleBtn").textContent = "Stop";
       document.getElementById("toggleBtn").classList.add("active");
       document.getElementById("status").textContent = "Starting…";
