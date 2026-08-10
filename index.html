@@ -77,10 +77,9 @@
     font-size: 10px;
     color: rgba(255,255,255,0.18);
   }
-  .settings-btn {
+  .icon-btn {
     position: absolute;
     bottom: 14px;
-    left: 14px;
     background: transparent;
     border: 1px solid var(--rule);
     color: var(--dim);
@@ -93,9 +92,11 @@
     align-items: center;
     justify-content: center;
   }
+  .settings-btn { left: 14px; }
+  .help-btn { left: 58px; }
 
-  /* Settings panel */
-  .settings-panel {
+  /* Shared panel styles */
+  .panel {
     position: fixed;
     inset: 0;
     background: rgba(0,0,0,0.82);
@@ -106,9 +107,9 @@
     overflow-y: auto;
     padding: 20px 0;
   }
-  .settings-panel.open { display: flex; }
+  .panel.open { display: flex; }
 
-  .settings-card {
+  .panel-card {
     background: #121c28;
     border: 1px solid var(--rule);
     border-radius: 16px;
@@ -117,7 +118,7 @@
     max-width: 380px;
     color: var(--ink);
   }
-  .settings-card h2 {
+  .panel-card h2 {
     margin: 0 0 16px 0;
     font-size: 14px;
     letter-spacing: 0.14em;
@@ -195,7 +196,7 @@
     padding: 7px 9px;
     border-radius: 7px;
   }
-  .settings-close {
+  .panel-close {
     margin-top: 20px;
     width: 100%;
     padding: 11px;
@@ -207,6 +208,30 @@
     letter-spacing: 0.08em;
     border-radius: 8px;
     cursor: pointer;
+  }
+
+  /* Help specific */
+  .help-item {
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .help-item:last-of-type { border-bottom: none; margin-bottom: 0; }
+  .help-title {
+    font-size: 13px;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .help-desc {
+    font-size: 13px;
+    color: var(--ink);
+    line-height: 1.45;
+  }
+  .help-note {
+    margin-top: 18px;
+    font-size: 12px;
+    color: var(--dim);
+    line-height: 1.5;
   }
 </style>
 </head>
@@ -228,12 +253,13 @@
 
   <div class="status" id="status">Tap Start to begin</div>
 
-  <button class="settings-btn" id="settingsBtn" title="Settings">⚙</button>
-  <div class="version">v1.2</div>
+  <button class="icon-btn settings-btn" id="settingsBtn" title="Settings">⚙</button>
+  <button class="icon-btn help-btn" id="helpBtn" title="Help">?</button>
+  <div class="version">v1.3</div>
 
   <!-- Settings Panel -->
-  <div class="settings-panel" id="settingsPanel">
-    <div class="settings-card">
+  <div class="panel" id="settingsPanel">
+    <div class="panel-card">
       <h2>Settings</h2>
 
       <div class="setting-row">
@@ -262,7 +288,45 @@
       <div class="label-row"><span>Rib 3</span><input id="lab-rib3" type="text"></div>
       <div class="label-row"><span>Setpoint</span><input id="lab-setpoint" type="text"></div>
 
-      <button class="settings-close" id="settingsClose">Close</button>
+      <button class="panel-close" id="settingsClose">Close</button>
+    </div>
+  </div>
+
+  <!-- Help Panel -->
+  <div class="panel" id="helpPanel">
+    <div class="panel-card">
+      <h2>Sound Guide</h2>
+
+      <div class="help-item">
+        <div class="help-title">Deep drone</div>
+        <div class="help-desc">Pit / Airstream temperature. Pitch rises as the pit gets hotter.</div>
+      </div>
+
+      <div class="help-item">
+        <div class="help-title">Soft mid tone</div>
+        <div class="help-desc">Rib probe 1. Tracks that probe’s temperature.</div>
+      </div>
+
+      <div class="help-item">
+        <div class="help-title">Second mid tone</div>
+        <div class="help-desc">Rib probe 2. Creates gentle beating when it differs from probe 1.</div>
+      </div>
+
+      <div class="help-item">
+        <div class="help-title">Higher quieter tone</div>
+        <div class="help-desc">Rib probe 3. Adds density and moves with the third rack.</div>
+      </div>
+
+      <div class="help-item">
+        <div class="help-title">Noise / texture</div>
+        <div class="help-desc">Drive (fan) output. Grows louder and brighter when the fan runs harder.</div>
+      </div>
+
+      <div class="help-note">
+        The texture is designed to stay low and continuous. Once you learn it, you can hear the state of the cook without looking at the numbers.
+      </div>
+
+      <button class="panel-close" id="helpClose">Close</button>
     </div>
   </div>
 
@@ -320,24 +384,18 @@
   }
 
   function applySettings() {
-    // Numbers visibility
     document.getElementById("tempsPanel").style.display = settings.showNumbers ? "grid" : "none";
-
-    // Volume + audio
     document.getElementById("vol").value = settings.volume;
     if (masterGain) {
       masterGain.gain.setTargetAtTime(settings.audio ? settings.volume : 0, audioCtx?.currentTime || 0, 0.15);
     }
 
-    // HA fields
     document.getElementById("haUrl").value = settings.haUrl;
     document.getElementById("haToken").value = settings.haToken;
 
-    // Toggles
     document.getElementById("togAudio").classList.toggle("on", settings.audio);
     document.getElementById("togNumbers").classList.toggle("on", settings.showNumbers);
 
-    // Labels
     document.getElementById("lab-pit").value = settings.labels.pit;
     document.getElementById("lab-drive").value = settings.labels.drive;
     document.getElementById("lab-rib1").value = settings.labels.rib1;
@@ -345,7 +403,6 @@
     document.getElementById("lab-rib3").value = settings.labels.rib3;
     document.getElementById("lab-setpoint").value = settings.labels.setpoint;
 
-    // Apply labels to main display
     document.getElementById("label-pit").textContent = settings.labels.pit;
     document.getElementById("label-drive").textContent = settings.labels.drive;
     document.getElementById("label-rib1").textContent = settings.labels.rib1;
@@ -354,13 +411,13 @@
     document.getElementById("label-setpoint").textContent = settings.labels.setpoint;
   }
 
+  // Settings open/close
   document.getElementById("settingsBtn").addEventListener("click", () => {
     document.getElementById("settingsPanel").classList.add("open");
     applySettings();
   });
 
   document.getElementById("settingsClose").addEventListener("click", () => {
-    // Save everything
     settings.haUrl = document.getElementById("haUrl").value.trim() || DEFAULTS.haUrl;
     settings.haToken = document.getElementById("haToken").value.trim();
     settings.volume = parseFloat(document.getElementById("vol").value);
@@ -378,9 +435,18 @@
   });
 
   document.getElementById("settingsPanel").addEventListener("click", (e) => {
-    if (e.target.id === "settingsPanel") {
-      document.getElementById("settingsClose").click();
-    }
+    if (e.target.id === "settingsPanel") document.getElementById("settingsClose").click();
+  });
+
+  // Help open/close
+  document.getElementById("helpBtn").addEventListener("click", () => {
+    document.getElementById("helpPanel").classList.add("open");
+  });
+  document.getElementById("helpClose").addEventListener("click", () => {
+    document.getElementById("helpPanel").classList.remove("open");
+  });
+  document.getElementById("helpPanel").addEventListener("click", (e) => {
+    if (e.target.id === "helpPanel") document.getElementById("helpClose").click();
   });
 
   document.getElementById("togAudio").addEventListener("click", () => {
@@ -410,7 +476,6 @@
     masterGain.gain.value = settings.audio ? settings.volume : 0;
     masterGain.connect(audioCtx.destination);
 
-    // Deep drone (pit)
     droneOsc = audioCtx.createOscillator();
     droneGain = audioCtx.createGain();
     droneOsc.type = "sine";
@@ -420,7 +485,6 @@
     droneGain.connect(masterGain);
     droneOsc.start();
 
-    // Three rib tones
     const baseFreqs = [110, 138, 164];
     for (let i = 0; i < 3; i++) {
       ribOsc[i] = audioCtx.createOscillator();
@@ -433,7 +497,6 @@
       ribOsc[i].start();
     }
 
-    // Noise texture (fan)
     const bufferSize = audioCtx.sampleRate * 2;
     const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
     const data = buffer.getChannelData(0);
@@ -561,7 +624,6 @@
     }
   });
 
-  // Init
   applySettings();
 })();
 </script>
