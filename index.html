@@ -88,22 +88,23 @@
   }
   .version {
     position: absolute;
-    bottom: 12px;
-    right: 16px;
-    font-size: 13px;
+    bottom: 14px;
+    right: 18px;
+    font-size: 15px;
     font-weight: 700;
-    color: rgba(255,255,255,0.45);
+    color: rgba(255,255,255,0.55);
+    letter-spacing: 0.03em;
   }
   .icon-btn {
     position: absolute;
     bottom: 12px;
     background: transparent;
-    border: 1px solid var(--rule);
-    color: var(--dim);
-    font-size: 18px;
+    border: 1.5px solid rgba(255,255,255,0.25);
+    color: rgba(255,255,255,0.7);
+    font-size: 20px;
     font-weight: 700;
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     cursor: pointer;
     display: flex;
@@ -111,7 +112,7 @@
     justify-content: center;
   }
   .settings-btn { left: 14px; }
-  .help-btn { left: 62px; }
+  .help-btn { left: 68px; }
 
   .panel {
     position: fixed;
@@ -265,7 +266,7 @@
 
   <button class="icon-btn settings-btn" id="settingsBtn" title="Settings">⚙</button>
   <button class="icon-btn help-btn" id="helpBtn" title="Help">?</button>
-  <div class="version">v1.7</div>
+  <div class="version">v1.8</div>
 
   <!-- Settings Panel -->
   <div class="panel" id="settingsPanel">
@@ -315,7 +316,7 @@
       </div>
       <div class="help-item">
         <div class="help-title">Bird calls</div>
-        <div class="help-desc">The five meat probes. Short calls every 1–2 minutes. Higher temperature → higher pitch. Call ends upward if that probe is rising, downward if falling.</div>
+        <div class="help-desc">Only live meat probes sing. Each has a distinct voice. Calls every 1–2 minutes. Higher temp → higher pitch. Ending rises if that probe is climbing, falls if dropping.</div>
       </div>
       <div class="help-item">
         <div class="help-title">Noise texture</div>
@@ -331,7 +332,7 @@
       </div>
 
       <div class="help-note">
-        The meat birds are intentionally sparse so the soundscape stays calm during long smokes. All settings (including the token) are saved in the browser.
+        Birds stay silent until a probe reports a live reading after you press Start. Unplugged probes do not sing.
       </div>
 
       <button class="panel-close" id="helpClose">Close</button>
@@ -358,8 +359,8 @@
     m1:       "sensor.14_texas_smoker_v_m_shelf_center",
     m2:       "sensor.14_texas_smoker_v_middle_left",
     m3:       "sensor.14_texas_smoker_middle_r",
-    m4:       "sensor.14_texas_smoker_v_m_shelf_center", // update when you have real 4th probe
-    m5:       "sensor.14_texas_smoker_v_middle_left",    // update when you have real 5th probe
+    m4:       "sensor.14_texas_smoker_v_m_shelf_center",
+    m5:       "sensor.14_texas_smoker_v_middle_left",
     drive:    "sensor.14_texas_smoker_drive_output",
     setpoint: "sensor.14_texas_smoker_setpoint"
   };
@@ -370,6 +371,15 @@
   const BIRD_MIN_MS = 65000;
   const BIRD_MAX_MS = 115000;
 
+  // Distinct bird personalities
+  const BIRD_VOICE = [
+    { type: "sine",     base: 620, spread: 5.8, dur: 0.70, q: 3.2 }, // lower, slower
+    { type: "triangle", base: 780, span: 6.2, dur: 0.55, q: 4.0 }, // mid, clearer
+    { type: "sine",     base: 980, span: 6.8, dur: 0.42, q: 5.5 }, // higher, shorter
+    { type: "triangle", base: 1100,span: 7.0, dur: 0.50, q: 4.8 }, // mid-high
+    { type: "sine",     base: 1300,span: 7.5, dur: 0.38, q: 6.0 }  // highest, quick
+  ];
+
   let settings = JSON.parse(JSON.stringify(DEFAULTS));
   try {
     const saved = JSON.parse(localStorage.getItem("smoker-audio-settings") || "{}");
@@ -378,7 +388,8 @@
   } catch(e) {}
 
   let audioCtx = null, masterGain = null, running = false;
-  let values = { air: 200, m1: 170, m2: 170, m3: 170, m4: 170, m5: 170, drive: 0, setpoint: 180 };
+  let values = { air: null, m1: null, m2: null, m3: null, m4: null, m5: null, drive: null, setpoint: null };
+  let live = { m1: false, m2: false, m3: false, m4: false, m5: false }; // only live probes sing
   let prevMeat = { m1: null, m2: null, m3: null, m4: null, m5: null };
   let meatTrend = { m1: 0, m2: 0, m3: 0, m4: 0, m5: 0 };
   let totalHeat = { m1: 0, m2: 0, m3: 0, m4: 0, m5: 0 };
@@ -507,7 +518,7 @@
 
     const now = Date.now();
     for (let i = 0; i < 5; i++) {
-      nextBirdTime[i] = now + 8000 + i * 12000 + Math.random() * 15000;
+      nextBirdTime[i] = now + 10000 + i * 14000 + Math.random() * 12000;
     }
   }
 
@@ -534,43 +545,47 @@
 
     const keys = ["m1","m2","m3","m4","m5"];
     const key = keys[index];
+
+    // Only live probes sing
+    if (!live[key]) return;
+
     const temp = values[key];
     if (temp == null || temp < 50) return;
 
+    const voice = BIRD_VOICE[index];
     const trend = meatTrend[key];
     const now = audioCtx.currentTime;
 
-    const baseFreq = 650 + (temp - 140) * 6.5;
-    const startFreq = Math.max(500, Math.min(1800, baseFreq));
-
+    const startFreq = Math.max(480, Math.min(1900, voice.base + (temp - 150) * voice.span));
     let endFreq = startFreq;
-    if (trend > 0) endFreq = startFreq * 1.18;
-    else if (trend < 0) endFreq = startFreq * 0.82;
+    if (trend > 0) endFreq = startFreq * 1.20;
+    else if (trend < 0) endFreq = startFreq * 0.80;
 
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     const filter = audioCtx.createBiquadFilter();
 
-    osc.type = "sine";
+    osc.type = voice.type;
     filter.type = "bandpass";
     filter.frequency.value = startFreq;
-    filter.Q.value = 4;
+    filter.Q.value = voice.q;
 
+    const dur = voice.dur;
     gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(0.07, now + 0.04);
-    gain.gain.linearRampToValueAtTime(0.05, now + 0.25);
-    gain.gain.linearRampToValueAtTime(0, now + 0.55);
+    gain.gain.linearRampToValueAtTime(0.075, now + 0.03);
+    gain.gain.linearRampToValueAtTime(0.055, now + dur * 0.45);
+    gain.gain.linearRampToValueAtTime(0, now + dur);
 
     osc.frequency.setValueAtTime(startFreq, now);
-    osc.frequency.linearRampToValueAtTime(startFreq * 1.04, now + 0.18);
-    osc.frequency.linearRampToValueAtTime(endFreq, now + 0.48);
+    osc.frequency.linearRampToValueAtTime(startFreq * 1.05, now + dur * 0.3);
+    osc.frequency.linearRampToValueAtTime(endFreq, now + dur * 0.85);
 
     osc.connect(filter);
     filter.connect(gain);
     gain.connect(masterGain);
 
     osc.start(now);
-    osc.stop(now + 0.6);
+    osc.stop(now + dur + 0.05);
   }
 
   function scheduleBirds() {
@@ -588,9 +603,10 @@
     if (!audioCtx || !running) return;
     const t = audioCtx.currentTime;
 
-    const air = values.air || 200;
-    const freq = 40 + (air - 140) * 0.16;
-    droneOsc.frequency.setTargetAtTime(Math.max(36, Math.min(90, freq)), t, 2.0);
+    if (values.air != null) {
+      const freq = 40 + (values.air - 140) * 0.16;
+      droneOsc.frequency.setTargetAtTime(Math.max(36, Math.min(90, freq)), t, 2.0);
+    }
 
     const drive = Math.max(0, Math.min(100, values.drive || 0));
     noiseGain.gain.setTargetAtTime((drive / 100) * 0.08, t, 1.3);
@@ -626,7 +642,8 @@
       function num(id) {
         const s = map[id];
         if (!s || s.state === "unavailable" || s.state === "unknown") return null;
-        return parseFloat(s.state);
+        const v = parseFloat(s.state);
+        return isNaN(v) ? null : v;
       }
 
       const now = Date.now();
@@ -639,11 +656,13 @@
         m5: num(ENTITIES.m5)
       };
 
+      // Mark live probes and accumulate heat / trends
       if (lastSampleTime != null) {
         const deltaMin = (now - lastSampleTime) / 60000;
         ["m1","m2","m3","m4","m5"].forEach(k => {
           const t = newM[k];
-          if (t != null && t > 50) {
+          if (t != null && t > 40) {
+            live[k] = true;
             totalHeat[k] += t * deltaMin;
             if (prevMeat[k] != null) {
               const d = t - prevMeat[k];
@@ -652,18 +671,20 @@
               else meatTrend[k] = 0;
             }
             prevMeat[k] = t;
+          } else {
+            live[k] = false;
           }
         });
       }
       lastSampleTime = now;
 
-      values.m1 = newM.m1 ?? values.m1;
-      values.m2 = newM.m2 ?? values.m2;
-      values.m3 = newM.m3 ?? values.m3;
-      values.m4 = newM.m4 ?? values.m4;
-      values.m5 = newM.m5 ?? values.m5;
-      values.drive = num(ENTITIES.drive) ?? values.drive;
-      values.setpoint = num(ENTITIES.setpoint) ?? values.setpoint;
+      values.m1 = newM.m1;
+      values.m2 = newM.m2;
+      values.m3 = newM.m3;
+      values.m4 = newM.m4;
+      values.m5 = newM.m5;
+      values.drive = num(ENTITIES.drive);
+      values.setpoint = num(ENTITIES.setpoint);
 
       if (newAir != null) {
         if (prevAir != null) {
@@ -686,19 +707,22 @@
         values.air = newAir;
       }
 
-      document.getElementById("air").textContent = values.air ? values.air.toFixed(1) + "°" : "—";
-      document.getElementById("m1").textContent = values.m1 ? values.m1.toFixed(1) + "°" : "—";
-      document.getElementById("m2").textContent = values.m2 ? values.m2.toFixed(1) + "°" : "—";
-      document.getElementById("m3").textContent = values.m3 ? values.m3.toFixed(1) + "°" : "—";
-      document.getElementById("m4").textContent = values.m4 ? values.m4.toFixed(1) + "°" : "—";
-      document.getElementById("m5").textContent = values.m5 ? values.m5.toFixed(1) + "°" : "—";
+      // UI
+      document.getElementById("air").textContent = values.air != null ? values.air.toFixed(1) + "°" : "—";
+      document.getElementById("m1").textContent = values.m1 != null ? values.m1.toFixed(1) + "°" : "—";
+      document.getElementById("m2").textContent = values.m2 != null ? values.m2.toFixed(1) + "°" : "—";
+      document.getElementById("m3").textContent = values.m3 != null ? values.m3.toFixed(1) + "°" : "—";
+      document.getElementById("m4").textContent = values.m4 != null ? values.m4.toFixed(1) + "°" : "—";
+      document.getElementById("m5").textContent = values.m5 != null ? values.m5.toFixed(1) + "°" : "—";
       document.getElementById("drive").textContent = values.drive != null ? values.drive + "%" : "—";
-      document.getElementById("setpoint").textContent = values.setpoint ? values.setpoint.toFixed(0) + "°" : "—";
+      document.getElementById("setpoint").textContent = values.setpoint != null ? values.setpoint.toFixed(0) + "°" : "—";
 
       updateHeatDisplay();
 
       if (airTrend === 0) {
-        document.getElementById("status").textContent = "Live · " + new Date().toLocaleTimeString();
+        const liveCount = Object.values(live).filter(Boolean).length;
+        document.getElementById("status").textContent =
+          `Live · ${liveCount} probe${liveCount === 1 ? "" : "s"} · ${new Date().toLocaleTimeString()}`;
       }
       updateAudio();
     } catch (err) {
@@ -711,6 +735,8 @@
   // Start / Stop
   document.getElementById("toggleBtn").onclick = async () => {
     if (!running) {
+      // reset live flags on each start
+      live = { m1: false, m2: false, m3: false, m4: false, m5: false };
       initAudio();
       if (audioCtx.state === "suspended") await audioCtx.resume();
       running = true;
