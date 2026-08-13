@@ -88,20 +88,22 @@
   }
   .version {
     position: absolute;
-    bottom: 10px;
-    right: 14px;
-    font-size: 10px;
-    color: rgba(255,255,255,0.18);
+    bottom: 12px;
+    right: 16px;
+    font-size: 13px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.45);
   }
   .icon-btn {
     position: absolute;
-    bottom: 14px;
+    bottom: 12px;
     background: transparent;
     border: 1px solid var(--rule);
     color: var(--dim);
-    font-size: 15px;
-    width: 36px;
-    height: 36px;
+    font-size: 18px;
+    font-weight: 700;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     cursor: pointer;
     display: flex;
@@ -109,7 +111,7 @@
     justify-content: center;
   }
   .settings-btn { left: 14px; }
-  .help-btn { left: 58px; }
+  .help-btn { left: 62px; }
 
   .panel {
     position: fixed;
@@ -263,7 +265,7 @@
 
   <button class="icon-btn settings-btn" id="settingsBtn" title="Settings">⚙</button>
   <button class="icon-btn help-btn" id="helpBtn" title="Help">?</button>
-  <div class="version">v1.6</div>
+  <div class="version">v1.7</div>
 
   <!-- Settings Panel -->
   <div class="panel" id="settingsPanel">
@@ -286,7 +288,7 @@
       <input class="settings-input" id="haUrl" type="text" placeholder="http://homeassistant.local:8123">
 
       <div class="settings-label">Long-Lived Token</div>
-      <input class="settings-input" id="haToken" type="password" placeholder="Paste token here">
+      <input class="settings-input" id="haToken" type="text" placeholder="Paste token here" autocomplete="off">
 
       <div class="settings-label" style="margin-top:16px;">Sensor Labels</div>
       <div class="label-row"><span>Air</span><input id="lab-air" type="text"></div>
@@ -329,7 +331,7 @@
       </div>
 
       <div class="help-note">
-        The meat birds are intentionally sparse so the soundscape stays calm during long smokes.
+        The meat birds are intentionally sparse so the soundscape stays calm during long smokes. All settings (including the token) are saved in the browser.
       </div>
 
       <button class="panel-close" id="helpClose">Close</button>
@@ -365,8 +367,8 @@
   const POLL_MS = 35000;
   const TREND_THRESHOLD = 1.2;
   const LOW_AIR = 180;
-  const BIRD_MIN_MS = 65000;   // 65 s
-  const BIRD_MAX_MS = 115000;  // 115 s
+  const BIRD_MIN_MS = 65000;
+  const BIRD_MAX_MS = 115000;
 
   let settings = JSON.parse(JSON.stringify(DEFAULTS));
   try {
@@ -378,7 +380,7 @@
   let audioCtx = null, masterGain = null, running = false;
   let values = { air: 200, m1: 170, m2: 170, m3: 170, m4: 170, m5: 170, drive: 0, setpoint: 180 };
   let prevMeat = { m1: null, m2: null, m3: null, m4: null, m5: null };
-  let meatTrend = { m1: 0, m2: 0, m3: 0, m4: 0, m5: 0 }; // -1, 0, +1
+  let meatTrend = { m1: 0, m2: 0, m3: 0, m4: 0, m5: 0 };
   let totalHeat = { m1: 0, m2: 0, m3: 0, m4: 0, m5: 0 };
   let lastSampleTime = null;
   let prevAir = null;
@@ -399,22 +401,22 @@
     if (masterGain) {
       masterGain.gain.setTargetAtTime(settings.audio ? settings.volume : 0, audioCtx?.currentTime || 0, 0.15);
     }
-    document.getElementById("haUrl").value = settings.haUrl;
-    document.getElementById("haToken").value = settings.haToken;
+    document.getElementById("haUrl").value = settings.haUrl || "";
+    document.getElementById("haToken").value = settings.haToken || "";
     document.getElementById("togAudio").classList.toggle("on", settings.audio);
     document.getElementById("togNumbers").classList.toggle("on", settings.showNumbers);
 
     ["air","drive","m1","m2","m3","m4","m5","setpoint"].forEach(k => {
       const lab = document.getElementById("lab-" + k);
-      if (lab) lab.value = settings.labels[k];
+      if (lab) lab.value = settings.labels[k] || DEFAULTS.labels[k];
       const disp = document.getElementById("label-" + k);
-      if (disp) disp.textContent = settings.labels[k];
+      if (disp) disp.textContent = settings.labels[k] || DEFAULTS.labels[k];
       const hl = document.getElementById("hl-" + k);
-      if (hl) hl.textContent = settings.labels[k];
+      if (hl) hl.textContent = settings.labels[k] || DEFAULTS.labels[k];
     });
   }
 
-  // UI
+  // Settings UI
   document.getElementById("settingsBtn").onclick = () => {
     document.getElementById("settingsPanel").classList.add("open");
     applySettings();
@@ -440,11 +442,22 @@
     if (e.target.id === "helpPanel") document.getElementById("helpClose").click();
   };
 
-  document.getElementById("togAudio").onclick = () => { settings.audio = !settings.audio; saveSettings(); applySettings(); };
-  document.getElementById("togNumbers").onclick = () => { settings.showNumbers = !settings.showNumbers; saveSettings(); applySettings(); };
+  document.getElementById("togAudio").onclick = () => {
+    settings.audio = !settings.audio;
+    saveSettings();
+    applySettings();
+  };
+  document.getElementById("togNumbers").onclick = () => {
+    settings.showNumbers = !settings.showNumbers;
+    saveSettings();
+    applySettings();
+  };
   document.getElementById("vol").oninput = () => {
     settings.volume = parseFloat(document.getElementById("vol").value);
-    if (masterGain && settings.audio) masterGain.gain.setTargetAtTime(settings.volume, audioCtx.currentTime, 0.1);
+    saveSettings();
+    if (masterGain && settings.audio) {
+      masterGain.gain.setTargetAtTime(settings.volume, audioCtx.currentTime, 0.1);
+    }
   };
 
   document.getElementById("resetHeatBtn").onclick = () => {
@@ -461,7 +474,6 @@
     masterGain.gain.value = settings.audio ? settings.volume : 0;
     masterGain.connect(audioCtx.destination);
 
-    // Continuous air drone
     droneOsc = audioCtx.createOscillator();
     droneGain = audioCtx.createGain();
     droneFilter = audioCtx.createBiquadFilter();
@@ -475,7 +487,6 @@
     droneGain.connect(masterGain);
     droneOsc.start();
 
-    // Continuous fan noise
     const bufferSize = audioCtx.sampleRate * 2;
     const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
     const data = buffer.getChannelData(0);
@@ -494,7 +505,6 @@
     noiseGain.connect(masterGain);
     noiseSource.start();
 
-    // Stagger first bird calls
     const now = Date.now();
     for (let i = 0; i < 5; i++) {
       nextBirdTime[i] = now + 8000 + i * 12000 + Math.random() * 15000;
@@ -519,7 +529,6 @@
     droneFilter.frequency.linearRampToValueAtTime(400, now + 1.2);
   }
 
-  // Bird call for one meat probe
   function playBird(index) {
     if (!audioCtx || !settings.audio || !running) return;
 
@@ -528,17 +537,15 @@
     const temp = values[key];
     if (temp == null || temp < 50) return;
 
-    const trend = meatTrend[key]; // -1, 0, +1
+    const trend = meatTrend[key];
     const now = audioCtx.currentTime;
 
-    // Base pitch from temperature (roughly 700–1600 Hz)
     const baseFreq = 650 + (temp - 140) * 6.5;
     const startFreq = Math.max(500, Math.min(1800, baseFreq));
 
-    // Ending sweep
     let endFreq = startFreq;
-    if (trend > 0) endFreq = startFreq * 1.18;      // upward
-    else if (trend < 0) endFreq = startFreq * 0.82; // downward
+    if (trend > 0) endFreq = startFreq * 1.18;
+    else if (trend < 0) endFreq = startFreq * 0.82;
 
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
@@ -549,13 +556,11 @@
     filter.frequency.value = startFreq;
     filter.Q.value = 4;
 
-    // Short envelope
     gain.gain.setValueAtTime(0, now);
     gain.gain.linearRampToValueAtTime(0.07, now + 0.04);
     gain.gain.linearRampToValueAtTime(0.05, now + 0.25);
     gain.gain.linearRampToValueAtTime(0, now + 0.55);
 
-    // Frequency contour
     osc.frequency.setValueAtTime(startFreq, now);
     osc.frequency.linearRampToValueAtTime(startFreq * 1.04, now + 0.18);
     osc.frequency.linearRampToValueAtTime(endFreq, now + 0.48);
@@ -574,7 +579,6 @@
     for (let i = 0; i < 5; i++) {
       if (now >= nextBirdTime[i]) {
         playBird(i);
-        // Next call in 65–115 s
         nextBirdTime[i] = now + BIRD_MIN_MS + Math.random() * (BIRD_MAX_MS - BIRD_MIN_MS);
       }
     }
@@ -584,12 +588,10 @@
     if (!audioCtx || !running) return;
     const t = audioCtx.currentTime;
 
-    // Air drone
     const air = values.air || 200;
     const freq = 40 + (air - 140) * 0.16;
     droneOsc.frequency.setTargetAtTime(Math.max(36, Math.min(90, freq)), t, 2.0);
 
-    // Fan noise
     const drive = Math.max(0, Math.min(100, values.drive || 0));
     noiseGain.gain.setTargetAtTime((drive / 100) * 0.08, t, 1.3);
     noiseFilter.frequency.setTargetAtTime(480 + drive * 11, t, 1.4);
@@ -637,15 +639,12 @@
         m5: num(ENTITIES.m5)
       };
 
-      // Total Heat + meat trends
       if (lastSampleTime != null) {
         const deltaMin = (now - lastSampleTime) / 60000;
         ["m1","m2","m3","m4","m5"].forEach(k => {
           const t = newM[k];
           if (t != null && t > 50) {
             totalHeat[k] += t * deltaMin;
-
-            // Trend
             if (prevMeat[k] != null) {
               const d = t - prevMeat[k];
               if (d >= TREND_THRESHOLD) meatTrend[k] = 1;
@@ -666,7 +665,6 @@
       values.drive = num(ENTITIES.drive) ?? values.drive;
       values.setpoint = num(ENTITIES.setpoint) ?? values.setpoint;
 
-      // Air trend + notices
       if (newAir != null) {
         if (prevAir != null) {
           const delta = newAir - prevAir;
@@ -688,7 +686,6 @@
         values.air = newAir;
       }
 
-      // UI
       document.getElementById("air").textContent = values.air ? values.air.toFixed(1) + "°" : "—";
       document.getElementById("m1").textContent = values.m1 ? values.m1.toFixed(1) + "°" : "—";
       document.getElementById("m2").textContent = values.m2 ? values.m2.toFixed(1) + "°" : "—";
@@ -723,7 +720,7 @@
       document.getElementById("status").textContent = "Starting…";
       fetchStates();
       setInterval(fetchStates, POLL_MS);
-      setInterval(scheduleBirds, 2000); // check for bird calls every 2 s
+      setInterval(scheduleBirds, 2000);
     } else {
       running = false;
       document.getElementById("toggleBtn").textContent = "Start";
