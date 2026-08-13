@@ -62,8 +62,10 @@
   }
   .controls {
     display: flex;
-    gap: 14px;
+    gap: 12px;
     align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
   }
   button {
     background: transparent;
@@ -93,7 +95,6 @@
     font-size: 15px;
     font-weight: 700;
     color: rgba(255,255,255,0.55);
-    letter-spacing: 0.03em;
   }
   .icon-btn {
     position: absolute;
@@ -245,6 +246,7 @@
     <div><span class="label" id="label-m3">Meat 3</span><span class="value" id="m3">—</span></div>
     <div><span class="label" id="label-m4">Meat 4</span><span class="value" id="m4">—</span></div>
     <div><span class="label" id="label-m5">Meat 5</span><span class="value" id="m5">—</span></div>
+    <div><span class="label" id="label-m6">Meat 6</span><span class="value" id="m6">—</span></div>
     <div><span class="label" id="label-setpoint">Setpoint</span><span class="value" id="setpoint">—</span></div>
 
     <div class="heat" id="heatPanel">
@@ -254,6 +256,7 @@
       <div class="heat-row"><span id="hl-m3">Meat 3</span><span id="h-m3">0</span></div>
       <div class="heat-row"><span id="hl-m4">Meat 4</span><span id="h-m4">0</span></div>
       <div class="heat-row"><span id="hl-m5">Meat 5</span><span id="h-m5">0</span></div>
+      <div class="heat-row"><span id="hl-m6">Meat 6</span><span id="h-m6">0</span></div>
     </div>
   </div>
 
@@ -266,7 +269,7 @@
 
   <button class="icon-btn settings-btn" id="settingsBtn" title="Settings">⚙</button>
   <button class="icon-btn help-btn" id="helpBtn" title="Help">?</button>
-  <div class="version">v1.8</div>
+  <div class="version">v1.9</div>
 
   <!-- Settings Panel -->
   <div class="panel" id="settingsPanel">
@@ -280,6 +283,14 @@
       <div class="setting-row">
         <span>Show numbers</span>
         <div class="toggle on" id="togNumbers"></div>
+      </div>
+      <div class="setting-row">
+        <span>Test Mode</span>
+        <div class="toggle" id="togTest"></div>
+      </div>
+      <div class="setting-row">
+        <span>Accelerated</span>
+        <div class="toggle on" id="togAccel"></div>
       </div>
 
       <div class="settings-label">Volume</div>
@@ -299,6 +310,7 @@
       <div class="label-row"><span>Meat 3</span><input id="lab-m3" type="text"></div>
       <div class="label-row"><span>Meat 4</span><input id="lab-m4" type="text"></div>
       <div class="label-row"><span>Meat 5</span><input id="lab-m5" type="text"></div>
+      <div class="label-row"><span>Meat 6</span><input id="lab-m6" type="text"></div>
       <div class="label-row"><span>Setpoint</span><input id="lab-setpoint" type="text"></div>
 
       <button class="panel-close" id="settingsClose">Close</button>
@@ -312,27 +324,27 @@
 
       <div class="help-item">
         <div class="help-title">Deep drone</div>
-        <div class="help-desc">Air / pit temperature. Continuous. Rising or falling produces a gentle bend (notice).</div>
+        <div class="help-desc">Air temperature. Continuous. Rising or falling produces a gentle bend.</div>
       </div>
       <div class="help-item">
         <div class="help-title">Bird calls</div>
-        <div class="help-desc">Only live meat probes sing. Each has a distinct voice. Calls every 1–2 minutes. Higher temp → higher pitch. Ending rises if that probe is climbing, falls if dropping.</div>
+        <div class="help-desc">Only live meat probes sing. Distinct voices. Ending rises if climbing, falls if dropping.</div>
       </div>
       <div class="help-item">
         <div class="help-title">Noise texture</div>
-        <div class="help-desc">Drive / fan output. Grows with fan speed.</div>
+        <div class="help-desc">Drive / fan output.</div>
       </div>
       <div class="help-item">
         <div class="help-title">Total Heat</div>
-        <div class="help-desc">Running integral of temperature × time (°F·minutes) for each meat probe.</div>
+        <div class="help-desc">°F·minutes accumulated for each meat probe.</div>
       </div>
       <div class="help-item">
-        <div class="help-title">Falling below 180 °F</div>
-        <div class="help-desc">The falling notice on the air drone becomes stronger and more frequent.</div>
+        <div class="help-title">Test Mode</div>
+        <div class="help-desc">Uses built-in sample data. No Home Assistant or FireBoard required. Accelerated plays the sample much faster.</div>
       </div>
 
       <div class="help-note">
-        Birds stay silent until a probe reports a live reading after you press Start. Unplugged probes do not sing.
+        In Test Mode the sample assumes 2-minute intervals. Accelerated mode compresses that for quick listening.
       </div>
 
       <button class="panel-close" id="helpClose">Close</button>
@@ -341,15 +353,48 @@
 
 <script>
 (() => {
+  // ===== Sample data (2-min intervals). Replace later with your Excel export. =====
+  // Columns: air, setpoint, drive, m1, m2, m3, m4, m5, m6
+  // null = probe not in use
+  const SAMPLE = [
+    { air:185, sp:225, drive:35, m1:65,  m2:68,  m3:null, m4:null, m5:null, m6:null },
+    { air:192, sp:225, drive:40, m1:72,  m2:74,  m3:null, m4:null, m5:null, m6:null },
+    { air:201, sp:225, drive:45, m1:81,  m2:83,  m3:null, m4:null, m5:null, m6:null },
+    { air:210, sp:225, drive:50, m1:92,  m2:95,  m3:null, m4:null, m5:null, m6:null },
+    { air:218, sp:225, drive:55, m1:105, m2:108, m3:null, m4:null, m5:null, m6:null },
+    { air:224, sp:225, drive:40, m1:118, m2:121, m3:null, m4:null, m5:null, m6:null },
+    { air:227, sp:225, drive:25, m1:130, m2:133, m3:null, m4:null, m5:null, m6:null },
+    { air:225, sp:225, drive:20, m1:141, m2:144, m3:null, m4:null, m5:null, m6:null },
+    { air:223, sp:225, drive:30, m1:151, m2:154, m3:null, m4:null, m5:null, m6:null },
+    { air:220, sp:225, drive:35, m1:160, m2:162, m3:null, m4:null, m5:null, m6:null },
+    { air:216, sp:225, drive:45, m1:167, m2:169, m3:null, m4:null, m5:null, m6:null },
+    { air:212, sp:225, drive:55, m1:173, m2:175, m3:null, m4:null, m5:null, m6:null },
+    { air:208, sp:225, drive:60, m1:178, m2:180, m3:null, m4:null, m5:null, m6:null },
+    { air:205, sp:225, drive:50, m1:182, m2:184, m3:null, m4:null, m5:null, m6:null },
+    { air:203, sp:225, drive:40, m1:185, m2:187, m3:null, m4:null, m5:null, m6:null },
+    { air:207, sp:225, drive:45, m1:188, m2:190, m3:null, m4:null, m5:null, m6:null },
+    { air:214, sp:225, drive:50, m1:191, m2:193, m3:null, m4:null, m5:null, m6:null },
+    { air:221, sp:225, drive:35, m1:194, m2:196, m3:null, m4:null, m5:null, m6:null },
+    { air:226, sp:225, drive:20, m1:196, m2:198, m3:null, m4:null, m5:null, m6:null },
+    { air:224, sp:225, drive:15, m1:198, m2:200, m3:null, m4:null, m5:null, m6:null },
+    { air:219, sp:225, drive:30, m1:199, m2:201, m3:null, m4:null, m5:null, m6:null },
+    { air:215, sp:225, drive:40, m1:200, m2:202, m3:null, m4:null, m5:null, m6:null },
+    { air:211, sp:225, drive:45, m1:201, m2:203, m3:null, m4:null, m5:null, m6:null },
+    { air:208, sp:225, drive:50, m1:202, m2:204, m3:null, m4:null, m5:null, m6:null },
+    { air:206, sp:225, drive:40, m1:203, m2:205, m3:null, m4:null, m5:null, m6:null }
+  ];
+
   const DEFAULTS = {
     haUrl: "http://homeassistant.local:8123",
     haToken: "",
     audio: true,
     showNumbers: true,
+    testMode: false,
+    accelerated: true,
     volume: 0.35,
     labels: {
       air: "Air", drive: "Drive",
-      m1: "Meat 1", m2: "Meat 2", m3: "Meat 3", m4: "Meat 4", m5: "Meat 5",
+      m1: "Meat 1", m2: "Meat 2", m3: "Meat 3", m4: "Meat 4", m5: "Meat 5", m6: "Meat 6",
       setpoint: "Setpoint"
     }
   };
@@ -361,6 +406,7 @@
     m3:       "sensor.14_texas_smoker_middle_r",
     m4:       "sensor.14_texas_smoker_v_m_shelf_center",
     m5:       "sensor.14_texas_smoker_v_middle_left",
+    m6:       "sensor.14_texas_smoker_middle_r",
     drive:    "sensor.14_texas_smoker_drive_output",
     setpoint: "sensor.14_texas_smoker_setpoint"
   };
@@ -370,14 +416,16 @@
   const LOW_AIR = 180;
   const BIRD_MIN_MS = 65000;
   const BIRD_MAX_MS = 115000;
+  const REAL_INTERVAL_MS = 120000;   // 2 minutes
+  const ACCEL_INTERVAL_MS = 3500;    // accelerated
 
-  // Distinct bird personalities
   const BIRD_VOICE = [
-    { type: "sine",     base: 620, spread: 5.8, dur: 0.70, q: 3.2 }, // lower, slower
-    { type: "triangle", base: 780, span: 6.2, dur: 0.55, q: 4.0 }, // mid, clearer
-    { type: "sine",     base: 980, span: 6.8, dur: 0.42, q: 5.5 }, // higher, shorter
-    { type: "triangle", base: 1100,span: 7.0, dur: 0.50, q: 4.8 }, // mid-high
-    { type: "sine",     base: 1300,span: 7.5, dur: 0.38, q: 6.0 }  // highest, quick
+    { type: "sine",     base: 620,  span: 5.8, dur: 0.70, q: 3.2 },
+    { type: "triangle", base: 780,  span: 6.2, dur: 0.55, q: 4.0 },
+    { type: "sine",     base: 980,  span: 6.8, dur: 0.42, q: 5.5 },
+    { type: "triangle", base: 1100, span: 7.0, dur: 0.50, q: 4.8 },
+    { type: "sine",     base: 1300, span: 7.5, dur: 0.38, q: 6.0 },
+    { type: "triangle", base: 1450, span: 7.8, dur: 0.45, q: 5.2 }
   ];
 
   let settings = JSON.parse(JSON.stringify(DEFAULTS));
@@ -388,19 +436,21 @@
   } catch(e) {}
 
   let audioCtx = null, masterGain = null, running = false;
-  let values = { air: null, m1: null, m2: null, m3: null, m4: null, m5: null, drive: null, setpoint: null };
-  let live = { m1: false, m2: false, m3: false, m4: false, m5: false }; // only live probes sing
-  let prevMeat = { m1: null, m2: null, m3: null, m4: null, m5: null };
-  let meatTrend = { m1: 0, m2: 0, m3: 0, m4: 0, m5: 0 };
-  let totalHeat = { m1: 0, m2: 0, m3: 0, m4: 0, m5: 0 };
+  let values = { air:null, m1:null, m2:null, m3:null, m4:null, m5:null, m6:null, drive:null, setpoint:null };
+  let live = { m1:false, m2:false, m3:false, m4:false, m5:false, m6:false };
+  let prevMeat = { m1:null, m2:null, m3:null, m4:null, m5:null, m6:null };
+  let meatTrend = { m1:0, m2:0, m3:0, m4:0, m5:0, m6:0 };
+  let totalHeat = { m1:0, m2:0, m3:0, m4:0, m5:0, m6:0 };
   let lastSampleTime = null;
   let prevAir = null;
   let airTrend = 0;
   let lastNoticeAt = 0;
+  let testIndex = 0;
+  let testTimer = null;
 
   let droneOsc, droneGain, droneFilter;
   let noiseSource, noiseFilter, noiseGain;
-  let nextBirdTime = [0,0,0,0,0];
+  let nextBirdTime = [0,0,0,0,0,0];
 
   function saveSettings() {
     localStorage.setItem("smoker-audio-settings", JSON.stringify(settings));
@@ -416,8 +466,10 @@
     document.getElementById("haToken").value = settings.haToken || "";
     document.getElementById("togAudio").classList.toggle("on", settings.audio);
     document.getElementById("togNumbers").classList.toggle("on", settings.showNumbers);
+    document.getElementById("togTest").classList.toggle("on", settings.testMode);
+    document.getElementById("togAccel").classList.toggle("on", settings.accelerated);
 
-    ["air","drive","m1","m2","m3","m4","m5","setpoint"].forEach(k => {
+    ["air","drive","m1","m2","m3","m4","m5","m6","setpoint"].forEach(k => {
       const lab = document.getElementById("lab-" + k);
       if (lab) lab.value = settings.labels[k] || DEFAULTS.labels[k];
       const disp = document.getElementById("label-" + k);
@@ -427,7 +479,7 @@
     });
   }
 
-  // Settings UI
+  // UI handlers
   document.getElementById("settingsBtn").onclick = () => {
     document.getElementById("settingsPanel").classList.add("open");
     applySettings();
@@ -436,7 +488,7 @@
     settings.haUrl = document.getElementById("haUrl").value.trim() || DEFAULTS.haUrl;
     settings.haToken = document.getElementById("haToken").value.trim();
     settings.volume = parseFloat(document.getElementById("vol").value);
-    ["air","drive","m1","m2","m3","m4","m5","setpoint"].forEach(k => {
+    ["air","drive","m1","m2","m3","m4","m5","m6","setpoint"].forEach(k => {
       settings.labels[k] = document.getElementById("lab-" + k).value.trim() || DEFAULTS.labels[k];
     });
     saveSettings();
@@ -453,26 +505,19 @@
     if (e.target.id === "helpPanel") document.getElementById("helpClose").click();
   };
 
-  document.getElementById("togAudio").onclick = () => {
-    settings.audio = !settings.audio;
-    saveSettings();
-    applySettings();
-  };
-  document.getElementById("togNumbers").onclick = () => {
-    settings.showNumbers = !settings.showNumbers;
-    saveSettings();
-    applySettings();
-  };
+  document.getElementById("togAudio").onclick = () => { settings.audio = !settings.audio; saveSettings(); applySettings(); };
+  document.getElementById("togNumbers").onclick = () => { settings.showNumbers = !settings.showNumbers; saveSettings(); applySettings(); };
+  document.getElementById("togTest").onclick = () => { settings.testMode = !settings.testMode; saveSettings(); applySettings(); };
+  document.getElementById("togAccel").onclick = () => { settings.accelerated = !settings.accelerated; saveSettings(); applySettings(); };
+
   document.getElementById("vol").oninput = () => {
     settings.volume = parseFloat(document.getElementById("vol").value);
     saveSettings();
-    if (masterGain && settings.audio) {
-      masterGain.gain.setTargetAtTime(settings.volume, audioCtx.currentTime, 0.1);
-    }
+    if (masterGain && settings.audio) masterGain.gain.setTargetAtTime(settings.volume, audioCtx.currentTime, 0.1);
   };
 
   document.getElementById("resetHeatBtn").onclick = () => {
-    totalHeat = { m1: 0, m2: 0, m3: 0, m4: 0, m5: 0 };
+    totalHeat = { m1:0, m2:0, m3:0, m4:0, m5:0, m6:0 };
     lastSampleTime = Date.now();
     updateHeatDisplay();
   };
@@ -517,8 +562,8 @@
     noiseSource.start();
 
     const now = Date.now();
-    for (let i = 0; i < 5; i++) {
-      nextBirdTime[i] = now + 10000 + i * 14000 + Math.random() * 12000;
+    for (let i = 0; i < 6; i++) {
+      nextBirdTime[i] = now + 8000 + i * 11000 + Math.random() * 10000;
     }
   }
 
@@ -542,21 +587,17 @@
 
   function playBird(index) {
     if (!audioCtx || !settings.audio || !running) return;
-
-    const keys = ["m1","m2","m3","m4","m5"];
+    const keys = ["m1","m2","m3","m4","m5","m6"];
     const key = keys[index];
-
-    // Only live probes sing
     if (!live[key]) return;
-
     const temp = values[key];
-    if (temp == null || temp < 50) return;
+    if (temp == null || temp < 40) return;
 
     const voice = BIRD_VOICE[index];
     const trend = meatTrend[key];
     const now = audioCtx.currentTime;
 
-    const startFreq = Math.max(480, Math.min(1900, voice.base + (temp - 150) * voice.span));
+    const startFreq = Math.max(480, Math.min(1950, voice.base + (temp - 150) * voice.span));
     let endFreq = startFreq;
     if (trend > 0) endFreq = startFreq * 1.20;
     else if (trend < 0) endFreq = startFreq * 0.80;
@@ -591,7 +632,7 @@
   function scheduleBirds() {
     if (!running) return;
     const now = Date.now();
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 6; i++) {
       if (now >= nextBirdTime[i]) {
         playBird(i);
         nextBirdTime[i] = now + BIRD_MIN_MS + Math.random() * (BIRD_MAX_MS - BIRD_MIN_MS);
@@ -602,27 +643,89 @@
   function updateAudio() {
     if (!audioCtx || !running) return;
     const t = audioCtx.currentTime;
-
     if (values.air != null) {
       const freq = 40 + (values.air - 140) * 0.16;
       droneOsc.frequency.setTargetAtTime(Math.max(36, Math.min(90, freq)), t, 2.0);
     }
-
     const drive = Math.max(0, Math.min(100, values.drive || 0));
     noiseGain.gain.setTargetAtTime((drive / 100) * 0.08, t, 1.3);
     noiseFilter.frequency.setTargetAtTime(480 + drive * 11, t, 1.4);
   }
 
   function updateHeatDisplay() {
-    document.getElementById("h-m1").textContent = Math.round(totalHeat.m1).toLocaleString();
-    document.getElementById("h-m2").textContent = Math.round(totalHeat.m2).toLocaleString();
-    document.getElementById("h-m3").textContent = Math.round(totalHeat.m3).toLocaleString();
-    document.getElementById("h-m4").textContent = Math.round(totalHeat.m4).toLocaleString();
-    document.getElementById("h-m5").textContent = Math.round(totalHeat.m5).toLocaleString();
+    ["m1","m2","m3","m4","m5","m6"].forEach(k => {
+      document.getElementById("h-" + k).textContent = Math.round(totalHeat[k]).toLocaleString();
+    });
   }
 
-  // ========== DATA ==========
+  function applyReading(row, deltaMin) {
+    const now = Date.now();
+    const newAir = row.air;
+    const newM = { m1:row.m1, m2:row.m2, m3:row.m3, m4:row.m4, m5:row.m5, m6:row.m6 };
+
+    ["m1","m2","m3","m4","m5","m6"].forEach(k => {
+      const t = newM[k];
+      if (t != null && t > 40) {
+        live[k] = true;
+        if (deltaMin > 0) totalHeat[k] += t * deltaMin;
+        if (prevMeat[k] != null) {
+          const d = t - prevMeat[k];
+          if (d >= TREND_THRESHOLD) meatTrend[k] = 1;
+          else if (d <= -TREND_THRESHOLD) meatTrend[k] = -1;
+          else meatTrend[k] = 0;
+        }
+        prevMeat[k] = t;
+      } else {
+        live[k] = false;
+      }
+    });
+
+    values.m1 = newM.m1; values.m2 = newM.m2; values.m3 = newM.m3;
+    values.m4 = newM.m4; values.m5 = newM.m5; values.m6 = newM.m6;
+    values.drive = row.drive;
+    values.setpoint = row.sp;
+
+    if (newAir != null) {
+      if (prevAir != null) {
+        const delta = newAir - prevAir;
+        if (delta >= TREND_THRESHOLD) airTrend = 1;
+        else if (delta <= -TREND_THRESHOLD) airTrend = -1;
+        else airTrend = 0;
+
+        const below = newAir < LOW_AIR;
+        const interval = (airTrend < 0 && below) ? 45000 : 90000;
+        if (airTrend !== 0 && (now - lastNoticeAt > interval)) {
+          playNotice(airTrend, airTrend < 0 && below);
+          lastNoticeAt = now;
+        }
+      }
+      prevAir = newAir;
+      values.air = newAir;
+    }
+
+    // UI
+    document.getElementById("air").textContent = values.air != null ? values.air.toFixed(1) + "°" : "—";
+    document.getElementById("m1").textContent = values.m1 != null ? values.m1.toFixed(1) + "°" : "—";
+    document.getElementById("m2").textContent = values.m2 != null ? values.m2.toFixed(1) + "°" : "—";
+    document.getElementById("m3").textContent = values.m3 != null ? values.m3.toFixed(1) + "°" : "—";
+    document.getElementById("m4").textContent = values.m4 != null ? values.m4.toFixed(1) + "°" : "—";
+    document.getElementById("m5").textContent = values.m5 != null ? values.m5.toFixed(1) + "°" : "—";
+    document.getElementById("m6").textContent = values.m6 != null ? values.m6.toFixed(1) + "°" : "—";
+    document.getElementById("drive").textContent = values.drive != null ? values.drive + "%" : "—";
+    document.getElementById("setpoint").textContent = values.setpoint != null ? values.setpoint.toFixed(0) + "°" : "—";
+
+    updateHeatDisplay();
+    updateAudio();
+
+    const liveCount = Object.values(live).filter(Boolean).length;
+    const mode = settings.testMode ? (settings.accelerated ? "Test · Accel" : "Test · Real") : "Live";
+    document.getElementById("status").textContent =
+      `${mode} · ${liveCount} probe${liveCount===1?"":"s"} · ${new Date().toLocaleTimeString()}`;
+  }
+
+  // ===== LIVE HA =====
   async function fetchStates() {
+    if (settings.testMode) return;
     if (!settings.haToken) {
       document.getElementById("status").textContent = "No token set — open Settings";
       return;
@@ -631,14 +734,12 @@
       const res = await fetch(`${settings.haUrl}/api/states`, {
         headers: { Authorization: `Bearer ${settings.haToken}` }
       });
-      if (res.status === 401) { document.getElementById("status").textContent = "Invalid token — check Settings"; return; }
-      if (res.status === 404) { document.getElementById("status").textContent = "Home Assistant not found — check URL"; return; }
+      if (res.status === 401) { document.getElementById("status").textContent = "Invalid token"; return; }
       if (!res.ok) { document.getElementById("status").textContent = `Error: HTTP ${res.status}`; return; }
 
       const states = await res.json();
       const map = {};
       states.forEach(s => map[s.entity_id] = s);
-
       function num(id) {
         const s = map[id];
         if (!s || s.state === "unavailable" || s.state === "unknown") return null;
@@ -647,96 +748,52 @@
       }
 
       const now = Date.now();
-      const newAir = num(ENTITIES.air);
-      const newM = {
-        m1: num(ENTITIES.m1),
-        m2: num(ENTITIES.m2),
-        m3: num(ENTITIES.m3),
-        m4: num(ENTITIES.m4),
-        m5: num(ENTITIES.m5)
-      };
-
-      // Mark live probes and accumulate heat / trends
-      if (lastSampleTime != null) {
-        const deltaMin = (now - lastSampleTime) / 60000;
-        ["m1","m2","m3","m4","m5"].forEach(k => {
-          const t = newM[k];
-          if (t != null && t > 40) {
-            live[k] = true;
-            totalHeat[k] += t * deltaMin;
-            if (prevMeat[k] != null) {
-              const d = t - prevMeat[k];
-              if (d >= TREND_THRESHOLD) meatTrend[k] = 1;
-              else if (d <= -TREND_THRESHOLD) meatTrend[k] = -1;
-              else meatTrend[k] = 0;
-            }
-            prevMeat[k] = t;
-          } else {
-            live[k] = false;
-          }
-        });
-      }
+      const deltaMin = lastSampleTime ? (now - lastSampleTime) / 60000 : 0;
       lastSampleTime = now;
 
-      values.m1 = newM.m1;
-      values.m2 = newM.m2;
-      values.m3 = newM.m3;
-      values.m4 = newM.m4;
-      values.m5 = newM.m5;
-      values.drive = num(ENTITIES.drive);
-      values.setpoint = num(ENTITIES.setpoint);
-
-      if (newAir != null) {
-        if (prevAir != null) {
-          const delta = newAir - prevAir;
-          if (delta >= TREND_THRESHOLD) airTrend = 1;
-          else if (delta <= -TREND_THRESHOLD) airTrend = -1;
-          else airTrend = 0;
-
-          const below = newAir < LOW_AIR;
-          const interval = (airTrend < 0 && below) ? 45000 : 90000;
-
-          if (airTrend !== 0 && (now - lastNoticeAt > interval)) {
-            playNotice(airTrend, airTrend < 0 && below);
-            lastNoticeAt = now;
-            document.getElementById("status").textContent =
-              airTrend > 0 ? "Air rising" : (below ? "Air falling (low)" : "Air falling");
-          }
-        }
-        prevAir = newAir;
-        values.air = newAir;
-      }
-
-      // UI
-      document.getElementById("air").textContent = values.air != null ? values.air.toFixed(1) + "°" : "—";
-      document.getElementById("m1").textContent = values.m1 != null ? values.m1.toFixed(1) + "°" : "—";
-      document.getElementById("m2").textContent = values.m2 != null ? values.m2.toFixed(1) + "°" : "—";
-      document.getElementById("m3").textContent = values.m3 != null ? values.m3.toFixed(1) + "°" : "—";
-      document.getElementById("m4").textContent = values.m4 != null ? values.m4.toFixed(1) + "°" : "—";
-      document.getElementById("m5").textContent = values.m5 != null ? values.m5.toFixed(1) + "°" : "—";
-      document.getElementById("drive").textContent = values.drive != null ? values.drive + "%" : "—";
-      document.getElementById("setpoint").textContent = values.setpoint != null ? values.setpoint.toFixed(0) + "°" : "—";
-
-      updateHeatDisplay();
-
-      if (airTrend === 0) {
-        const liveCount = Object.values(live).filter(Boolean).length;
-        document.getElementById("status").textContent =
-          `Live · ${liveCount} probe${liveCount === 1 ? "" : "s"} · ${new Date().toLocaleTimeString()}`;
-      }
-      updateAudio();
+      applyReading({
+        air: num(ENTITIES.air),
+        sp: num(ENTITIES.setpoint),
+        drive: num(ENTITIES.drive),
+        m1: num(ENTITIES.m1), m2: num(ENTITIES.m2), m3: num(ENTITIES.m3),
+        m4: num(ENTITIES.m4), m5: num(ENTITIES.m5), m6: num(ENTITIES.m6)
+      }, deltaMin);
     } catch (err) {
       document.getElementById("status").textContent = err.name === "TypeError"
-        ? "Cannot reach Home Assistant — check URL / network"
+        ? "Cannot reach Home Assistant"
         : "Error: " + err.message;
     }
+  }
+
+  // ===== TEST MODE =====
+  function advanceTest() {
+    if (!running || !settings.testMode) return;
+    if (testIndex >= SAMPLE.length) {
+      document.getElementById("status").textContent = "Test complete";
+      return;
+    }
+    const row = SAMPLE[testIndex];
+    const deltaMin = 2; // each sample row = 2 minutes
+    applyReading(row, deltaMin);
+    testIndex++;
+  }
+
+  function startTestTimer() {
+    stopTestTimer();
+    const ms = settings.accelerated ? ACCEL_INTERVAL_MS : REAL_INTERVAL_MS;
+    testTimer = setInterval(advanceTest, ms);
+    advanceTest(); // immediate first row
+  }
+
+  function stopTestTimer() {
+    if (testTimer) { clearInterval(testTimer); testTimer = null; }
   }
 
   // Start / Stop
   document.getElementById("toggleBtn").onclick = async () => {
     if (!running) {
-      // reset live flags on each start
-      live = { m1: false, m2: false, m3: false, m4: false, m5: false };
+      live = { m1:false, m2:false, m3:false, m4:false, m5:false, m6:false };
+      testIndex = 0;
       initAudio();
       if (audioCtx.state === "suspended") await audioCtx.resume();
       running = true;
@@ -744,11 +801,17 @@
       document.getElementById("toggleBtn").textContent = "Stop";
       document.getElementById("toggleBtn").classList.add("active");
       document.getElementById("status").textContent = "Starting…";
-      fetchStates();
-      setInterval(fetchStates, POLL_MS);
+
+      if (settings.testMode) {
+        startTestTimer();
+      } else {
+        fetchStates();
+        setInterval(fetchStates, POLL_MS);
+      }
       setInterval(scheduleBirds, 2000);
     } else {
       running = false;
+      stopTestTimer();
       document.getElementById("toggleBtn").textContent = "Start";
       document.getElementById("toggleBtn").classList.remove("active");
       if (masterGain) masterGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.4);
