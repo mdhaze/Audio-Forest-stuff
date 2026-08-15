@@ -36,11 +36,11 @@
   .temps {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 7px;
-    margin-bottom: 18px;
-    font-size: 13px;
+    gap: 8px;
+    margin-bottom: 20px;
+    font-size: 14px;
     width: 100%;
-    max-width: 320px;
+    max-width: 340px;
   }
   .temps div {
     display: flex;
@@ -50,24 +50,8 @@
   }
   .temps div.done .value { color: var(--done); font-weight: 700; }
   .temps div.done .label { color: var(--done); }
-  .label { color: var(--dim); }
-  .value { color: var(--ink); font-variant-numeric: tabular-nums; }
-  .target-note {
-    font-size: 11px;
-    color: var(--dim);
-    margin-left: 6px;
-  }
-  .heat {
-    margin-top: 8px;
-    padding-top: 10px;
-    border-top: 1px solid var(--rule);
-    font-size: 11.5px;
-  }
-  .heat-row {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 4px;
-  }
+  .label { color: var(--dim); min-width: 70px; }
+  .value { color: var(--ink); font-variant-numeric: tabular-nums; text-align: right; }
   .controls {
     display: flex;
     gap: 12px;
@@ -197,13 +181,13 @@
     color: var(--dim);
     margin-top: 14px;
   }
-  .label-row {
+  .label-row, .target-row {
     display: flex;
     gap: 10px;
     align-items: center;
     margin-top: 7px;
   }
-  .label-row span {
+  .label-row span, .target-row span {
     width: 64px;
     font-size: 12px;
     color: var(--dim);
@@ -218,18 +202,6 @@
     font-size: 13px;
     padding: 6px 8px;
     border-radius: 7px;
-  }
-  .target-row {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    margin-top: 7px;
-  }
-  .target-row span {
-    width: 64px;
-    font-size: 12px;
-    color: var(--dim);
-    flex-shrink: 0;
   }
   .target-row input {
     width: 70px;
@@ -272,7 +244,6 @@
   <div class="temps" id="tempsPanel">
     <div id="row-air"><span class="label" id="label-air">Air</span><span class="value" id="air">—</span></div>
     <div id="row-drive"><span class="label" id="label-drive">Drive</span><span class="value" id="drive">—</span></div>
-    <div id="row-setpoint"><span class="label" id="label-setpoint">Setpoint</span><span class="value" id="setpoint">—</span></div>
 
     <div id="row-m1" style="display:none"><span class="label" id="label-m1">Meat 1</span><span class="value" id="m1">—</span></div>
     <div id="row-m2" style="display:none"><span class="label" id="label-m2">Meat 2</span><span class="value" id="m2">—</span></div>
@@ -280,16 +251,6 @@
     <div id="row-m4" style="display:none"><span class="label" id="label-m4">Meat 4</span><span class="value" id="m4">—</span></div>
     <div id="row-m5" style="display:none"><span class="label" id="label-m5">Meat 5</span><span class="value" id="m5">—</span></div>
     <div id="row-m6" style="display:none"><span class="label" id="label-m6">Meat 6</span><span class="value" id="m6">—</span></div>
-
-    <div class="heat" id="heatPanel">
-      <div style="color:var(--dim); margin-bottom:4px;">Total Heat (°F·min)</div>
-      <div class="heat-row" id="heat-m1" style="display:none"><span id="hl-m1">Meat 1</span><span id="h-m1">0</span></div>
-      <div class="heat-row" id="heat-m2" style="display:none"><span id="hl-m2">Meat 2</span><span id="h-m2">0</span></div>
-      <div class="heat-row" id="heat-m3" style="display:none"><span id="hl-m3">Meat 3</span><span id="h-m3">0</span></div>
-      <div class="heat-row" id="heat-m4" style="display:none"><span id="hl-m4">Meat 4</span><span id="h-m4">0</span></div>
-      <div class="heat-row" id="heat-m5" style="display:none"><span id="hl-m5">Meat 5</span><span id="h-m5">0</span></div>
-      <div class="heat-row" id="heat-m6" style="display:none"><span id="hl-m6">Meat 6</span><span id="h-m6">0</span></div>
-    </div>
   </div>
 
   <div class="controls">
@@ -301,7 +262,7 @@
 
   <button class="icon-btn settings-btn" id="settingsBtn" title="Settings">⚙</button>
   <button class="icon-btn help-btn" id="helpBtn" title="Help">?</button>
-  <div class="version">v1.10</div>
+  <div class="version">v1.11</div>
 
   <!-- Settings Panel -->
   <div class="panel" id="settingsPanel">
@@ -343,7 +304,6 @@
       <div class="label-row"><span>Meat 4</span><input id="lab-m4" type="text"></div>
       <div class="label-row"><span>Meat 5</span><input id="lab-m5" type="text"></div>
       <div class="label-row"><span>Meat 6</span><input id="lab-m6" type="text"></div>
-      <div class="label-row"><span>Setpoint</span><input id="lab-setpoint" type="text"></div>
 
       <div class="settings-label" style="margin-top:16px;">Meat Targets (°F) — 0 = off</div>
       <div class="target-row"><span>Meat 1</span><input id="tgt-m1" type="number" min="0" max="250" step="1"></div>
@@ -372,15 +332,11 @@
       </div>
       <div class="help-item">
         <div class="help-title">Done alarm</div>
-        <div class="help-desc">When a probe reaches its individual target temperature, that bird switches to rapid continuous calling.</div>
+        <div class="help-desc">When a probe reaches its target, that bird switches to rapid continuous calling and the line turns green with DONE.</div>
       </div>
       <div class="help-item">
-        <div class="help-title">Noise texture</div>
-        <div class="help-desc">Drive / fan output.</div>
-      </div>
-      <div class="help-item">
-        <div class="help-title">Total Heat</div>
-        <div class="help-desc">°F·minutes accumulated for each live meat probe.</div>
+        <div class="help-title">Display format</div>
+        <div class="help-desc">Air shows current → setpoint. Meat shows current → target (total heat).</div>
       </div>
       <div class="help-item">
         <div class="help-title">Test Mode</div>
@@ -388,7 +344,7 @@
       </div>
 
       <div class="help-note">
-        Set individual meat targets in Settings (0 disables the alarm for that probe). Only probes that are actually reporting appear on the main screen.
+        Set individual meat targets in Settings (0 disables the alarm). Only probes that are reporting appear on the main screen.
       </div>
 
       <button class="panel-close" id="helpClose">Close</button>
@@ -435,8 +391,7 @@
     volume: 0.35,
     labels: {
       air: "Air", drive: "Drive",
-      m1: "Meat 1", m2: "Meat 2", m3: "Meat 3", m4: "Meat 4", m5: "Meat 5", m6: "Meat 6",
-      setpoint: "Setpoint"
+      m1: "Meat 1", m2: "Meat 2", m3: "Meat 3", m4: "Meat 4", m5: "Meat 5", m6: "Meat 6"
     },
     targets: { m1: 195, m2: 195, m3: 195, m4: 0, m5: 0, m6: 0 }
   };
@@ -458,7 +413,7 @@
   const LOW_AIR = 180;
   const BIRD_MIN_MS = 65000;
   const BIRD_MAX_MS = 115000;
-  const BIRD_DONE_MS = 2800;        // rapid calling when done
+  const BIRD_DONE_MS = 2800;
   const REAL_INTERVAL_MS = 120000;
   const ACCEL_INTERVAL_MS = 3500;
 
@@ -514,13 +469,11 @@
     document.getElementById("togTest").classList.toggle("on", settings.testMode);
     document.getElementById("togAccel").classList.toggle("on", settings.accelerated);
 
-    ["air","drive","m1","m2","m3","m4","m5","m6","setpoint"].forEach(k => {
+    ["air","drive","m1","m2","m3","m4","m5","m6"].forEach(k => {
       const lab = document.getElementById("lab-" + k);
       if (lab) lab.value = settings.labels[k] || DEFAULTS.labels[k];
       const disp = document.getElementById("label-" + k);
       if (disp) disp.textContent = settings.labels[k] || DEFAULTS.labels[k];
-      const hl = document.getElementById("hl-" + k);
-      if (hl) hl.textContent = settings.labels[k] || DEFAULTS.labels[k];
     });
 
     ["m1","m2","m3","m4","m5","m6"].forEach(k => {
@@ -529,7 +482,7 @@
     });
   }
 
-  // UI
+  // UI handlers
   document.getElementById("settingsBtn").onclick = () => {
     document.getElementById("settingsPanel").classList.add("open");
     applySettings();
@@ -538,7 +491,7 @@
     settings.haUrl = document.getElementById("haUrl").value.trim() || DEFAULTS.haUrl;
     settings.haToken = document.getElementById("haToken").value.trim();
     settings.volume = parseFloat(document.getElementById("vol").value);
-    ["air","drive","m1","m2","m3","m4","m5","m6","setpoint"].forEach(k => {
+    ["air","drive","m1","m2","m3","m4","m5","m6"].forEach(k => {
       settings.labels[k] = document.getElementById("lab-" + k).value.trim() || DEFAULTS.labels[k];
     });
     ["m1","m2","m3","m4","m5","m6"].forEach(k => {
@@ -573,7 +526,6 @@
   document.getElementById("resetHeatBtn").onclick = () => {
     totalHeat = { m1:0, m2:0, m3:0, m4:0, m5:0, m6:0 };
     lastSampleTime = Date.now();
-    updateHeatDisplay();
   };
 
   // ========== AUDIO ==========
@@ -654,10 +606,8 @@
 
     const startFreq = Math.max(480, Math.min(1950, voice.base + (temp - 150) * voice.span));
     let endFreq = startFreq;
-    if (isDone) {
-      // urgent upward ending when done
-      endFreq = startFreq * 1.28;
-    } else if (trend > 0) endFreq = startFreq * 1.20;
+    if (isDone) endFreq = startFreq * 1.28;
+    else if (trend > 0) endFreq = startFreq * 1.20;
     else if (trend < 0) endFreq = startFreq * 0.80;
 
     const osc = audioCtx.createOscillator();
@@ -696,7 +646,6 @@
       if (now >= nextBirdTime[i]) {
         playBird(i);
         const key = ["m1","m2","m3","m4","m5","m6"][i];
-        // Rapid calling when done, normal spacing otherwise
         if (done[key]) {
           nextBirdTime[i] = now + BIRD_DONE_MS + Math.random() * 800;
         } else {
@@ -718,20 +667,14 @@
     noiseFilter.frequency.setTargetAtTime(480 + drive * 11, t, 1.4);
   }
 
-  function updateHeatDisplay() {
-    ["m1","m2","m3","m4","m5","m6"].forEach(k => {
-      document.getElementById("h-" + k).textContent = Math.round(totalHeat[k]).toLocaleString();
-    });
-  }
-
   function updateVisibility() {
     ["m1","m2","m3","m4","m5","m6"].forEach(k => {
       const show = live[k];
       const row = document.getElementById("row-" + k);
-      const heat = document.getElementById("heat-" + k);
-      if (row) row.style.display = show ? "flex" : "none";
-      if (heat) heat.style.display = show ? "flex" : "none";
-      if (row) row.classList.toggle("done", !!done[k]);
+      if (row) {
+        row.style.display = show ? "flex" : "none";
+        row.classList.toggle("done", !!done[k]);
+      }
     });
   }
 
@@ -752,8 +695,6 @@
           else meatTrend[k] = 0;
         }
         prevMeat[k] = t;
-
-        // Target reached?
         const tgt = settings.targets[k] || 0;
         done[k] = (tgt > 0 && t >= tgt);
       } else {
@@ -785,19 +726,32 @@
       values.air = newAir;
     }
 
-    // UI values
-    document.getElementById("air").textContent = values.air != null ? values.air.toFixed(1) + "°" : "—";
-    document.getElementById("drive").textContent = values.drive != null ? values.drive + "%" : "—";
-    document.getElementById("setpoint").textContent = values.setpoint != null ? values.setpoint.toFixed(0) + "°" : "—";
+    // ===== Display format =====
+    // Air: 218 → 225
+    if (values.air != null) {
+      document.getElementById("air").textContent =
+        values.setpoint != null
+          ? `${values.air.toFixed(1)} → ${values.setpoint.toFixed(0)}`
+          : values.air.toFixed(1) + "°";
+    } else {
+      document.getElementById("air").textContent = "—";
+    }
 
+    // Drive
+    document.getElementById("drive").textContent =
+      values.drive != null ? values.drive + "%" : "—";
+
+    // Meat: 105 → 195 (3,000)  or  105 → 195 (3,000) DONE
     ["m1","m2","m3","m4","m5","m6"].forEach(k => {
       const el = document.getElementById(k);
       if (!el) return;
       if (values[k] != null) {
         const tgt = settings.targets[k] || 0;
-        let txt = values[k].toFixed(1) + "°";
+        const heat = Math.round(totalHeat[k]).toLocaleString();
+        let txt = values[k].toFixed(1);
+        if (tgt > 0) txt += ` → ${tgt}`;
+        txt += ` (${heat})`;
         if (done[k]) txt += " DONE";
-        else if (tgt > 0) txt += " →" + tgt;
         el.textContent = txt;
       } else {
         el.textContent = "—";
@@ -805,7 +759,6 @@
     });
 
     updateVisibility();
-    updateHeatDisplay();
     updateAudio();
 
     const liveCount = Object.values(live).filter(Boolean).length;
