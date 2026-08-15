@@ -10,6 +10,7 @@
     --ink: #d0d7e0;
     --dim: #6b7a8d;
     --accent: #4a9eff;
+    --done: #37e07a;
     --rule: rgba(255,255,255,0.10);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -34,24 +35,31 @@
   }
   .temps {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px 18px;
+    grid-template-columns: 1fr;
+    gap: 7px;
     margin-bottom: 18px;
-    font-size: 12.5px;
+    font-size: 13px;
     width: 100%;
-    max-width: 360px;
+    max-width: 320px;
   }
   .temps div {
     display: flex;
     justify-content: space-between;
-    gap: 10px;
+    gap: 12px;
+    align-items: baseline;
   }
+  .temps div.done .value { color: var(--done); font-weight: 700; }
+  .temps div.done .label { color: var(--done); }
   .label { color: var(--dim); }
   .value { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .target-note {
+    font-size: 11px;
+    color: var(--dim);
+    margin-left: 6px;
+  }
   .heat {
-    grid-column: 1 / -1;
-    margin-top: 6px;
-    padding-top: 8px;
+    margin-top: 8px;
+    padding-top: 10px;
     border-top: 1px solid var(--rule);
     font-size: 11.5px;
   }
@@ -211,6 +219,29 @@
     padding: 6px 8px;
     border-radius: 7px;
   }
+  .target-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 7px;
+  }
+  .target-row span {
+    width: 64px;
+    font-size: 12px;
+    color: var(--dim);
+    flex-shrink: 0;
+  }
+  .target-row input {
+    width: 70px;
+    background: #0c1219;
+    border: 1px solid var(--rule);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 13px;
+    padding: 6px 8px;
+    border-radius: 7px;
+    text-align: center;
+  }
   .panel-close {
     margin-top: 18px;
     width: 100%;
@@ -239,24 +270,25 @@
   <h1>Smoker Audio</h1>
 
   <div class="temps" id="tempsPanel">
-    <div><span class="label" id="label-air">Air</span><span class="value" id="air">—</span></div>
-    <div><span class="label" id="label-drive">Drive</span><span class="value" id="drive">—</span></div>
-    <div><span class="label" id="label-m1">Meat 1</span><span class="value" id="m1">—</span></div>
-    <div><span class="label" id="label-m2">Meat 2</span><span class="value" id="m2">—</span></div>
-    <div><span class="label" id="label-m3">Meat 3</span><span class="value" id="m3">—</span></div>
-    <div><span class="label" id="label-m4">Meat 4</span><span class="value" id="m4">—</span></div>
-    <div><span class="label" id="label-m5">Meat 5</span><span class="value" id="m5">—</span></div>
-    <div><span class="label" id="label-m6">Meat 6</span><span class="value" id="m6">—</span></div>
-    <div><span class="label" id="label-setpoint">Setpoint</span><span class="value" id="setpoint">—</span></div>
+    <div id="row-air"><span class="label" id="label-air">Air</span><span class="value" id="air">—</span></div>
+    <div id="row-drive"><span class="label" id="label-drive">Drive</span><span class="value" id="drive">—</span></div>
+    <div id="row-setpoint"><span class="label" id="label-setpoint">Setpoint</span><span class="value" id="setpoint">—</span></div>
+
+    <div id="row-m1" style="display:none"><span class="label" id="label-m1">Meat 1</span><span class="value" id="m1">—</span></div>
+    <div id="row-m2" style="display:none"><span class="label" id="label-m2">Meat 2</span><span class="value" id="m2">—</span></div>
+    <div id="row-m3" style="display:none"><span class="label" id="label-m3">Meat 3</span><span class="value" id="m3">—</span></div>
+    <div id="row-m4" style="display:none"><span class="label" id="label-m4">Meat 4</span><span class="value" id="m4">—</span></div>
+    <div id="row-m5" style="display:none"><span class="label" id="label-m5">Meat 5</span><span class="value" id="m5">—</span></div>
+    <div id="row-m6" style="display:none"><span class="label" id="label-m6">Meat 6</span><span class="value" id="m6">—</span></div>
 
     <div class="heat" id="heatPanel">
       <div style="color:var(--dim); margin-bottom:4px;">Total Heat (°F·min)</div>
-      <div class="heat-row"><span id="hl-m1">Meat 1</span><span id="h-m1">0</span></div>
-      <div class="heat-row"><span id="hl-m2">Meat 2</span><span id="h-m2">0</span></div>
-      <div class="heat-row"><span id="hl-m3">Meat 3</span><span id="h-m3">0</span></div>
-      <div class="heat-row"><span id="hl-m4">Meat 4</span><span id="h-m4">0</span></div>
-      <div class="heat-row"><span id="hl-m5">Meat 5</span><span id="h-m5">0</span></div>
-      <div class="heat-row"><span id="hl-m6">Meat 6</span><span id="h-m6">0</span></div>
+      <div class="heat-row" id="heat-m1" style="display:none"><span id="hl-m1">Meat 1</span><span id="h-m1">0</span></div>
+      <div class="heat-row" id="heat-m2" style="display:none"><span id="hl-m2">Meat 2</span><span id="h-m2">0</span></div>
+      <div class="heat-row" id="heat-m3" style="display:none"><span id="hl-m3">Meat 3</span><span id="h-m3">0</span></div>
+      <div class="heat-row" id="heat-m4" style="display:none"><span id="hl-m4">Meat 4</span><span id="h-m4">0</span></div>
+      <div class="heat-row" id="heat-m5" style="display:none"><span id="hl-m5">Meat 5</span><span id="h-m5">0</span></div>
+      <div class="heat-row" id="heat-m6" style="display:none"><span id="hl-m6">Meat 6</span><span id="h-m6">0</span></div>
     </div>
   </div>
 
@@ -269,7 +301,7 @@
 
   <button class="icon-btn settings-btn" id="settingsBtn" title="Settings">⚙</button>
   <button class="icon-btn help-btn" id="helpBtn" title="Help">?</button>
-  <div class="version">v1.9</div>
+  <div class="version">v1.10</div>
 
   <!-- Settings Panel -->
   <div class="panel" id="settingsPanel">
@@ -313,6 +345,14 @@
       <div class="label-row"><span>Meat 6</span><input id="lab-m6" type="text"></div>
       <div class="label-row"><span>Setpoint</span><input id="lab-setpoint" type="text"></div>
 
+      <div class="settings-label" style="margin-top:16px;">Meat Targets (°F) — 0 = off</div>
+      <div class="target-row"><span>Meat 1</span><input id="tgt-m1" type="number" min="0" max="250" step="1"></div>
+      <div class="target-row"><span>Meat 2</span><input id="tgt-m2" type="number" min="0" max="250" step="1"></div>
+      <div class="target-row"><span>Meat 3</span><input id="tgt-m3" type="number" min="0" max="250" step="1"></div>
+      <div class="target-row"><span>Meat 4</span><input id="tgt-m4" type="number" min="0" max="250" step="1"></div>
+      <div class="target-row"><span>Meat 5</span><input id="tgt-m5" type="number" min="0" max="250" step="1"></div>
+      <div class="target-row"><span>Meat 6</span><input id="tgt-m6" type="number" min="0" max="250" step="1"></div>
+
       <button class="panel-close" id="settingsClose">Close</button>
     </div>
   </div>
@@ -331,20 +371,24 @@
         <div class="help-desc">Only live meat probes sing. Distinct voices. Ending rises if climbing, falls if dropping.</div>
       </div>
       <div class="help-item">
+        <div class="help-title">Done alarm</div>
+        <div class="help-desc">When a probe reaches its individual target temperature, that bird switches to rapid continuous calling.</div>
+      </div>
+      <div class="help-item">
         <div class="help-title">Noise texture</div>
         <div class="help-desc">Drive / fan output.</div>
       </div>
       <div class="help-item">
         <div class="help-title">Total Heat</div>
-        <div class="help-desc">°F·minutes accumulated for each meat probe.</div>
+        <div class="help-desc">°F·minutes accumulated for each live meat probe.</div>
       </div>
       <div class="help-item">
         <div class="help-title">Test Mode</div>
-        <div class="help-desc">Uses built-in sample data. No Home Assistant or FireBoard required. Accelerated plays the sample much faster.</div>
+        <div class="help-desc">Uses built-in sample data. No Home Assistant required. Accelerated plays faster.</div>
       </div>
 
       <div class="help-note">
-        In Test Mode the sample assumes 2-minute intervals. Accelerated mode compresses that for quick listening.
+        Set individual meat targets in Settings (0 disables the alarm for that probe). Only probes that are actually reporting appear on the main screen.
       </div>
 
       <button class="panel-close" id="helpClose">Close</button>
@@ -353,9 +397,6 @@
 
 <script>
 (() => {
-  // ===== Sample data (2-min intervals). Replace later with your Excel export. =====
-  // Columns: air, setpoint, drive, m1, m2, m3, m4, m5, m6
-  // null = probe not in use
   const SAMPLE = [
     { air:185, sp:225, drive:35, m1:65,  m2:68,  m3:null, m4:null, m5:null, m6:null },
     { air:192, sp:225, drive:40, m1:72,  m2:74,  m3:null, m4:null, m5:null, m6:null },
@@ -396,7 +437,8 @@
       air: "Air", drive: "Drive",
       m1: "Meat 1", m2: "Meat 2", m3: "Meat 3", m4: "Meat 4", m5: "Meat 5", m6: "Meat 6",
       setpoint: "Setpoint"
-    }
+    },
+    targets: { m1: 195, m2: 195, m3: 195, m4: 0, m5: 0, m6: 0 }
   };
 
   const ENTITIES = {
@@ -416,8 +458,9 @@
   const LOW_AIR = 180;
   const BIRD_MIN_MS = 65000;
   const BIRD_MAX_MS = 115000;
-  const REAL_INTERVAL_MS = 120000;   // 2 minutes
-  const ACCEL_INTERVAL_MS = 3500;    // accelerated
+  const BIRD_DONE_MS = 2800;        // rapid calling when done
+  const REAL_INTERVAL_MS = 120000;
+  const ACCEL_INTERVAL_MS = 3500;
 
   const BIRD_VOICE = [
     { type: "sine",     base: 620,  span: 5.8, dur: 0.70, q: 3.2 },
@@ -433,11 +476,13 @@
     const saved = JSON.parse(localStorage.getItem("smoker-audio-settings") || "{}");
     Object.assign(settings, saved);
     if (saved.labels) Object.assign(settings.labels, saved.labels);
+    if (saved.targets) Object.assign(settings.targets, saved.targets);
   } catch(e) {}
 
   let audioCtx = null, masterGain = null, running = false;
   let values = { air:null, m1:null, m2:null, m3:null, m4:null, m5:null, m6:null, drive:null, setpoint:null };
   let live = { m1:false, m2:false, m3:false, m4:false, m5:false, m6:false };
+  let done = { m1:false, m2:false, m3:false, m4:false, m5:false, m6:false };
   let prevMeat = { m1:null, m2:null, m3:null, m4:null, m5:null, m6:null };
   let meatTrend = { m1:0, m2:0, m3:0, m4:0, m5:0, m6:0 };
   let totalHeat = { m1:0, m2:0, m3:0, m4:0, m5:0, m6:0 };
@@ -477,9 +522,14 @@
       const hl = document.getElementById("hl-" + k);
       if (hl) hl.textContent = settings.labels[k] || DEFAULTS.labels[k];
     });
+
+    ["m1","m2","m3","m4","m5","m6"].forEach(k => {
+      const t = document.getElementById("tgt-" + k);
+      if (t) t.value = settings.targets[k] ?? 0;
+    });
   }
 
-  // UI handlers
+  // UI
   document.getElementById("settingsBtn").onclick = () => {
     document.getElementById("settingsPanel").classList.add("open");
     applySettings();
@@ -490,6 +540,10 @@
     settings.volume = parseFloat(document.getElementById("vol").value);
     ["air","drive","m1","m2","m3","m4","m5","m6","setpoint"].forEach(k => {
       settings.labels[k] = document.getElementById("lab-" + k).value.trim() || DEFAULTS.labels[k];
+    });
+    ["m1","m2","m3","m4","m5","m6"].forEach(k => {
+      const v = parseFloat(document.getElementById("tgt-" + k).value);
+      settings.targets[k] = isNaN(v) ? 0 : v;
     });
     saveSettings();
     applySettings();
@@ -595,11 +649,15 @@
 
     const voice = BIRD_VOICE[index];
     const trend = meatTrend[key];
+    const isDone = done[key];
     const now = audioCtx.currentTime;
 
     const startFreq = Math.max(480, Math.min(1950, voice.base + (temp - 150) * voice.span));
     let endFreq = startFreq;
-    if (trend > 0) endFreq = startFreq * 1.20;
+    if (isDone) {
+      // urgent upward ending when done
+      endFreq = startFreq * 1.28;
+    } else if (trend > 0) endFreq = startFreq * 1.20;
     else if (trend < 0) endFreq = startFreq * 0.80;
 
     const osc = audioCtx.createOscillator();
@@ -611,10 +669,12 @@
     filter.frequency.value = startFreq;
     filter.Q.value = voice.q;
 
-    const dur = voice.dur;
+    const dur = isDone ? voice.dur * 0.85 : voice.dur;
+    const level = isDone ? 0.11 : 0.075;
+
     gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(0.075, now + 0.03);
-    gain.gain.linearRampToValueAtTime(0.055, now + dur * 0.45);
+    gain.gain.linearRampToValueAtTime(level, now + 0.03);
+    gain.gain.linearRampToValueAtTime(level * 0.75, now + dur * 0.45);
     gain.gain.linearRampToValueAtTime(0, now + dur);
 
     osc.frequency.setValueAtTime(startFreq, now);
@@ -635,7 +695,13 @@
     for (let i = 0; i < 6; i++) {
       if (now >= nextBirdTime[i]) {
         playBird(i);
-        nextBirdTime[i] = now + BIRD_MIN_MS + Math.random() * (BIRD_MAX_MS - BIRD_MIN_MS);
+        const key = ["m1","m2","m3","m4","m5","m6"][i];
+        // Rapid calling when done, normal spacing otherwise
+        if (done[key]) {
+          nextBirdTime[i] = now + BIRD_DONE_MS + Math.random() * 800;
+        } else {
+          nextBirdTime[i] = now + BIRD_MIN_MS + Math.random() * (BIRD_MAX_MS - BIRD_MIN_MS);
+        }
       }
     }
   }
@@ -658,6 +724,17 @@
     });
   }
 
+  function updateVisibility() {
+    ["m1","m2","m3","m4","m5","m6"].forEach(k => {
+      const show = live[k];
+      const row = document.getElementById("row-" + k);
+      const heat = document.getElementById("heat-" + k);
+      if (row) row.style.display = show ? "flex" : "none";
+      if (heat) heat.style.display = show ? "flex" : "none";
+      if (row) row.classList.toggle("done", !!done[k]);
+    });
+  }
+
   function applyReading(row, deltaMin) {
     const now = Date.now();
     const newAir = row.air;
@@ -675,8 +752,13 @@
           else meatTrend[k] = 0;
         }
         prevMeat[k] = t;
+
+        // Target reached?
+        const tgt = settings.targets[k] || 0;
+        done[k] = (tgt > 0 && t >= tgt);
       } else {
         live[k] = false;
+        done[k] = false;
       }
     });
 
@@ -703,27 +785,39 @@
       values.air = newAir;
     }
 
-    // UI
+    // UI values
     document.getElementById("air").textContent = values.air != null ? values.air.toFixed(1) + "°" : "—";
-    document.getElementById("m1").textContent = values.m1 != null ? values.m1.toFixed(1) + "°" : "—";
-    document.getElementById("m2").textContent = values.m2 != null ? values.m2.toFixed(1) + "°" : "—";
-    document.getElementById("m3").textContent = values.m3 != null ? values.m3.toFixed(1) + "°" : "—";
-    document.getElementById("m4").textContent = values.m4 != null ? values.m4.toFixed(1) + "°" : "—";
-    document.getElementById("m5").textContent = values.m5 != null ? values.m5.toFixed(1) + "°" : "—";
-    document.getElementById("m6").textContent = values.m6 != null ? values.m6.toFixed(1) + "°" : "—";
     document.getElementById("drive").textContent = values.drive != null ? values.drive + "%" : "—";
     document.getElementById("setpoint").textContent = values.setpoint != null ? values.setpoint.toFixed(0) + "°" : "—";
 
+    ["m1","m2","m3","m4","m5","m6"].forEach(k => {
+      const el = document.getElementById(k);
+      if (!el) return;
+      if (values[k] != null) {
+        const tgt = settings.targets[k] || 0;
+        let txt = values[k].toFixed(1) + "°";
+        if (done[k]) txt += " DONE";
+        else if (tgt > 0) txt += " →" + tgt;
+        el.textContent = txt;
+      } else {
+        el.textContent = "—";
+      }
+    });
+
+    updateVisibility();
     updateHeatDisplay();
     updateAudio();
 
     const liveCount = Object.values(live).filter(Boolean).length;
+    const doneCount = Object.values(done).filter(Boolean).length;
     const mode = settings.testMode ? (settings.accelerated ? "Test · Accel" : "Test · Real") : "Live";
-    document.getElementById("status").textContent =
-      `${mode} · ${liveCount} probe${liveCount===1?"":"s"} · ${new Date().toLocaleTimeString()}`;
+    let status = `${mode} · ${liveCount} probe${liveCount===1?"":"s"}`;
+    if (doneCount) status += ` · ${doneCount} done`;
+    status += ` · ${new Date().toLocaleTimeString()}`;
+    document.getElementById("status").textContent = status;
   }
 
-  // ===== LIVE HA =====
+  // LIVE HA
   async function fetchStates() {
     if (settings.testMode) return;
     if (!settings.haToken) {
@@ -765,16 +859,14 @@
     }
   }
 
-  // ===== TEST MODE =====
+  // TEST MODE
   function advanceTest() {
     if (!running || !settings.testMode) return;
     if (testIndex >= SAMPLE.length) {
       document.getElementById("status").textContent = "Test complete";
       return;
     }
-    const row = SAMPLE[testIndex];
-    const deltaMin = 2; // each sample row = 2 minutes
-    applyReading(row, deltaMin);
+    applyReading(SAMPLE[testIndex], 2);
     testIndex++;
   }
 
@@ -782,7 +874,7 @@
     stopTestTimer();
     const ms = settings.accelerated ? ACCEL_INTERVAL_MS : REAL_INTERVAL_MS;
     testTimer = setInterval(advanceTest, ms);
-    advanceTest(); // immediate first row
+    advanceTest();
   }
 
   function stopTestTimer() {
@@ -793,6 +885,7 @@
   document.getElementById("toggleBtn").onclick = async () => {
     if (!running) {
       live = { m1:false, m2:false, m3:false, m4:false, m5:false, m6:false };
+      done = { m1:false, m2:false, m3:false, m4:false, m5:false, m6:false };
       testIndex = 0;
       initAudio();
       if (audioCtx.state === "suspended") await audioCtx.resume();
@@ -808,7 +901,7 @@
         fetchStates();
         setInterval(fetchStates, POLL_MS);
       }
-      setInterval(scheduleBirds, 2000);
+      setInterval(scheduleBirds, 1000);
     } else {
       running = false;
       stopTestTimer();
