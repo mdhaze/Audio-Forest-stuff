@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Smoker Audio</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg: #0c1219;
+    --ink: #d0d7e0;
+    --dim: #6b7a8d;
+    --accent: #4a9eff;
+    --done: #37e07a;
+    --rule: rgba(255,255,255,0.10);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+    user-select: none;
+  }
+  h1 {
+    font-size: 12px;
+    letter-spacing: 0.25em;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .temps {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    width: 100%;
+    max-width: 340px;
+  }
+  .temps div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: baseline;
+  }
+  .temps div.done .value { color: var(--done); font-weight: 700; }
+  .temps div.done .label { color: var(--done); }
+  .label { color: var(--dim); min-width: 70px; }
+  .value { color: var(--ink); font-variant-numeric: tabular-nums; text-align: right; }
+  .controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  button {
+    background: transparent;
+    border: 1px solid #2a3a4d;
+    color: var(--dim);
+    font-family: inherit;
+    font-size: 13px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  button.active {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .status {
+    margin-top: 16px;
+    font-size: 12px;
+    color: var(--dim);
+    text-align: center;
+    min-height: 18px;
+  }
+  .version {
+    position: absolute;
+    bottom: 14px;
+    right: 18px;
+    font-size: 15px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.55);
+  }
+  .icon-btn {
+    position: absolute;
+    bottom: 12px;
+    background: transparent;
+    border: 1.5px solid rgba(255,255,255,0.25);
+    color: rgba(255,255,255,0.7);
+    font-size: 20px;
+    font-weight: 700;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .settings-btn { left: 14px; }
+  .help-btn { left: 68px; }
+  .panel {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.82);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    overflow-y: auto;
+    padding: 20px 0;
+  }
+  .panel.open { display: flex; }
+  .panel-card {
+    background: #121c28;
+    border: 1px solid var(--rule);
+    border-radius: 16px;
+    padding: 22px 24px;
+    width: 92%;
+    max-width: 380px;
+    color: var(--ink);
+  }
+  .panel-card h2 {
+    margin: 0 0 16px 0;
+    font-size: 14px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+  .setting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 14px;
+  }
+  .toggle {
+    width: 46px;
+    height: 26px;
+    background: #2a3a4d;
+    border-radius: 999px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .toggle.on { background: var(--accent); }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 20px; height: 20px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.2s;
+  }
+  .toggle.on::after { transform: translateX(20px); }
+  .settings-input {
+    width: 100%;
+    background: #0c1219;
+    border: 1px solid var(--rule);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 13px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    margin-top: 5px;
+  }
+  .settings-label {
+    font-size: 12px;
+    color: var(--dim);
+    margin-top: 14px;
+  }
+  .label-row, .target-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 7px;
+  }
+  .label-row span, .target-row span {
+    width: 64px;
+    font-size: 12px;
+    color: var(--dim);
+    flex-shrink: 0;
+  }
+  .label-row input {
+    flex: 1;
+    background: #0c1219;
+    border: 1px solid var(--rule);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 13px;
+    padding: 6px 8px;
+    border-radius: 7px;
+  }
+  .target-row input {
+    width: 70px;
+    background: #0c1219;
+    border: 1px solid var(--rule);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 13px;
+    padding: 6px 8px;
+    border-radius: 7px;
+    text-align: center;
+  }
+  .panel-close {
+    margin-top: 18px;
+    width: 100%;
+    padding: 11px;
+    background: transparent;
+    border: 1px solid var(--rule);
+    color: var(--dim);
+    font-family: inherit;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .help-item {
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .help-item:last-of-type { border-bottom: none; }
+  .help-title { font-size: 13px; color: var(--accent); margin-bottom: 3px; }
+  .help-desc { font-size: 13px; line-height: 1.45; }
+  .help-note { margin-top: 16px; font-size: 12px; color: var(--dim); line-height: 1.5; }
+</style>
+</head>
+<body>
+  <h1>Smoker Audio</h1>
+  <div class="temps" id="tempsPanel">
+    <div id="row-air"><span class="label" id="label-air">Air</span><span class="value" id="air">—</span></div>
+    <div id="row-drive"><span class="label" id="label-drive">Drive</span><span class="value" id="drive">—</span></div>
+    <div id="row-m1" style="display:none"><span class="label" id="label-m1">Meat 1</span><span class="value" id="m1">—</span></div>
+    <div id="row-m2" style="display:none"><span class="label" id="label-m2">Meat 2</span><span class="value" id="m2">—</span></div>
+    <div id="row-m3" style="display:none"><span class="label" id="label-m3">Meat 3</span><span class="value" id="m3">—</span></div>
+    <div id="row-m4" style="display:none"><span class="label" id="label-m4">Meat 4</span><span class="value" id="m4">—</span></div>
+    <div id="row-m5" style="display:none"><span class="label" id="label-m5">Meat 5</span><span class="value" id="m5">—</span></div>
+    <div id="row-m6" style="display:none"><span class="label" id="label-m6">Meat 6</span><span class="value" id="m6">—</span></div>
+  </div>
+  <div class="controls">
+    <button id="toggleBtn">Start</button>
+    <button id="resetHeatBtn" style="font-size:12px;">Reset Heat</button>
+  </div>
+  <div class="status" id="status">Tap Start to begin</div>
+  <button class="icon-btn settings-btn" id="settingsBtn" title="Settings">⚙</button>
+  <button class="icon-btn help-btn" id="helpBtn" title="Help">?</button>
+  <div class="version">v1.18</div>
+  <!-- Settings Panel -->
+  <div class="panel" id="settingsPanel">
+    <div class="panel-card">
+      <h2>Settings</h2>
+      <div class="setting-row">
+        <span>Audio</span>
+        <div class="toggle on" id="togAudio"></div>
+      </div>
+      <div class="setting-row">
+        <span>Show numbers</span>
+        <div class="toggle on" id="togNumbers"></div>
+      </div>
+      <div class="setting-row">
+        <span>Test Mode</span>
+        <div class="toggle" id="togTest"></div>
+      </div>
+      <div class="setting-row">
+        <span>Accelerated</span>
+        <div class="toggle on" id="togAccel"></div>
+      </div>
+      <div class="settings-label">Volume</div>
+      <input type="range" id="vol" min="0" max="1" step="0.01" value="0.35" style="width:100%; margin-top:6px; accent-color:#4a9eff;">
+      <div class="settings-label">Home Assistant URL</div>
+      <input class="settings-input" id="haUrl" type="text" placeholder="http://homeassistant.local:8123">
+      <div class="settings-label">Long-Lived Token</div>
+      <input class="settings-input" id="haToken" type="text" placeholder="Paste token here" autocomplete="off">
+      <div class="settings-label" style="margin-top:16px;">Sensor Labels</div>
+      <div class="label-row"><span>Air</span><input id="lab-air" type="text"></div>
+      <div class="label-row"><span>Drive</span><input id="lab-drive" type="text"></div>
+      <div class="label-row"><span>Meat 1</span><input id="lab-m1" type="text"></div>
+      <div class="label-row"><span>Meat 2</span><input id="lab-m2" type="text"></div>
+      <div class="label-row"><span>Meat 3</span><input id="lab-m3" type="text"></div>
+      <div class="label-row"><span>Meat 4</span><input id="lab-m4" type="text"></div>
+      <div class="label-row"><span>Meat 5</span><input id="lab-m5" type="text"></div>
+      <div class="label-row"><span>Meat 6</span><input id="lab-m6" type="text"></div>
+      <div class="settings-label" style="margin-top:16px;">Meat Targets (°F) — 0 = off (sets single stage)</div>
+      <div class="target-row"><span>Meat 1</span><input id="tgt-m1" type="number" min="0" max="250" step="1"></div>
+      <div class="target-row"><span>Meat 2</span><input id="tgt-m2" type="number" min="0" max="250" step="1"></div>
+      <div class="target-row"><span>Meat 3</span><input id="tgt-m3" type="number" min="0" max="250" step="1"></div>
+      <div class="target-row"><span>Meat 4</span><input id="tgt-m4" type="number" min="0" max="250" step="1"></div>
+      <div class="target-row"><span>Meat 5</span><input id="tgt-m5" type="number" min="0" max="250" step="1"></div>
+      <div class="target-row"><span>Meat 6</span><input id="tgt-m6" type="number" min="0" max="250" step="1"></div>
+      <div class="settings-label" style="margin-top:18px;">Test Series</div>
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button id="importBtn" style="flex:1; padding:8px 10px;">Import .xlsx</button>
+        <button id="exportBtn" style="flex:1; padding:8px 10px;">Export</button>
+      </div>
+      <input type="file" id="importFile" accept=".xlsx,.xls,.csv" style="display:none">
+      <div id="scenarioLabel" style="font-size:12px; color:var(--dim); margin-top:8px; line-height:1.4;">Built-in SAMPLE</div>
+      <button class="panel-close" id="settingsClose">Close</button>
+    </div>
+  </div>
+  <!-- Help Panel -->
+  <div class="panel" id="helpPanel">
+    <div class="panel-card">
+      <h2>Sound Guide</h2>
+      <div class="help-item">
+        <div class="help-title">Deep drone</div>
+        <div class="help-desc">Air temperature. Continuous. Rising or falling produces a gentle bend.</div>
+      </div>
+      <div class="help-item">
+        <div class="help-title">Bird calls</div>
+        <div class="help-desc">Only live meat probes sing. Distinct voices. Ending rises if climbing, falls if dropping.</div>
+      </div>
+      <div class="help-item">
+        <div class="help-title">Stage transition</div>
+        <div class="help-desc">A probe can have multiple stages. Each stage ends on time limit or temperature (whichever comes first). A short distinct motif marks the transition. Only the final stage uses rapid continuous calling.</div>
+      </div>
+      <div class="help-item">
+        <div class="help-title">Final DONE</div>
+        <div class="help-desc">When the last stage of a probe ends, that bird switches to rapid continuous calling and the line turns green with DONE.</div>
+      </div>
+      <div class="help-item">
+        <div class="help-title">Display format</div>
+        <div class="help-desc">Air shows current → setpoint. Meat shows current, active stage end condition, total heat, and stage number.</div>
+      </div>
+      <div class="help-item">
+        <div class="help-title">Test Mode</div>
+        <div class="help-desc">Uses built-in sample or an imported Excel series. No Home Assistant required. Accelerated plays faster. Import/Export live in Settings.</div>
+      </div>
+      <div class="help-note">
+        Targets in Settings currently set a single-stage end temperature (0 disables). Multi-stage engine is active; full stage editor is next. Only probes that are reporting appear on the main screen.
+      </div>
+      <button class="panel-close" id="helpClose">Close</button>
+    </div>
+  </div>
+<script>
+(() => {
+  window.addEventListener("error", e => {
+    const msg = (e && e.message) ? e.message : "unknown";
+    const status = document.getElementById("status");
+    if (status) status.textContent = "Script error: " + msg;
+    console.error("Audio Forest error:", e);
+  });
+  const SAMPLE = [
+    { air:185, sp:225, drive:35, m1:65, m2:68, m3:null, m4:null, m5:null, m6:null },
+    { air:192, sp:225, drive:40, m1:72, m2:74, m3:null, m4:null, m5:null, m6:null },
+    { air:201, sp:225, drive:45, m1:81, m2:83, m3:null, m4:null, m5:null, m6:null },
+    { air:210, sp:225, drive:50, m1:92, m2:95, m3:null, m4:null, m5:null, m6:null },
+    { air:218, sp:225, drive:55, m1:105, m2:108, m3:null, m4:null, m5:null, m6:null },
+    { air:224, sp:225, drive:40, m1:118, m2:121, m3:null, m4:null, m5:null, m6:null },
+    { air:227, sp:225, drive:25, m1:130, m2:133, m3:null, m4:null, m5:null, m6:null },
+    { air:225, sp:225, drive:20, m1:141, m2:144, m3:null, m4:null, m5:null, m6:null },
+    { air:223, sp:225, drive:30, m1:151, m2:154, m3:null, m4:null, m5:null, m6:null },
+    { air:220, sp:225, drive:35, m1:160, m2:162, m3:null, m4:null, m5:null, m6:null },
+    { air:216, sp:225, drive:45, m1:167, m2:169, m3:null, m4:null, m5:null, m6:null },
+    { air:212, sp:225, drive:55, m1:173, m2:175, m3:null, m4:null, m5:null, m6:null },
+    { air:208, sp:225, drive:60, m1:178, m2:180, m3:null, m4:null, m5:null, m6:null },
+    { air:205, sp:225, drive:50, m1:182, m2:184, m3:null, m4:null, m5:null, m6:null },
+    { air:203, sp:225, drive:40, m1:185, m2:187, m3:null, m4:null, m5:null, m6:null },
+    { air:207, sp:225, drive:45, m1:188, m2:190, m3:null, m4:null, m5:null, m6:null },
+    { air:214, sp:225, drive:50, m1:191, m2:193, m3:null, m4:null, m5:null, m6:null },
+    { air:221, sp:225, drive:35, m1:194, m2:196, m3:null, m4:null, m5:null, m6:null },
+    { air:226, sp:225, drive:20, m1:196, m2:198, m3:null, m4:null, m5:null, m6:null },
+    { air:224, sp:225, drive:15, m1:198, m2:200, m3:null, m4:null, m5:null, m6:null },
+    { air:219, sp:225, drive:30, m1:199, m2:201, m3:null, m4:null, m5:null, m6:null },
+    { air:215, sp:225, drive:40, m1:200, m2:202, m3:null, m4:null, m5:null, m6:null },
+    { air:211, sp:225, drive:45, m1:201, m2:203, m3:null, m4:null, m5:null, m6:null },
+    { air:208, sp:225, drive:50, m1:202, m2:204, m3:null, m4:null, m5:null, m6:null },
+    { air:206, sp:225, drive:40, m1:203, m2:205, m3:null, m4:null, m5:null, m6:null }
+  ];
+  const DEFAULTS = {
+    haUrl: "http://homeassistant.local:8123",
+    haToken: "",
+    audio: true,
+    showNumbers: true,
+    testMode: false,
+    accelerated: true,
+    volume: 0.35,
+    labels: {
+      air: "Air", drive: "Drive",
+      m1: "Meat 1", m2: "Meat 2", m3: "Meat 3", m4: "Meat 4", m5: "Meat 5", m6: "Meat 6"
+    },
+    targets: { m1: 195, m2: 195, m3: 195, m4: 0, m5: 0, m6: 0 },
+    // stages[key] = [{duration: minutes|0, target: °F|0}, ...]
+    // duration 0 or target 0 = ignore that condition. First condition met ends the stage.
+    stages: {
+      // Demo multi-stage on Meat 1 so the transition motif is audible in accelerated test.
+      // Stage 1 ends after ~40 virtual minutes; Stage 2 ends on temperature.
+      m1: [ {duration: 40, target: 0}, {duration: 0, target: 195} ],
+      m2: [ {duration: 0, target: 195} ],
+      m3: [ {duration: 0, target: 195} ],
+      m4: [ {duration: 0, target: 0} ],
+      m5: [ {duration: 0, target: 0} ],
+      m6: [ {duration: 0, target: 0} ]
+    }
+  };
+  const ENTITIES = {
+    air: "sensor.14_texas_smoker_v_m_shelf_center",
+    m1: "sensor.14_texas_smoker_meat_1_ch1",
+    m2: "sensor.14_texas_smoker_meat_2_ch2",
+    m3: "sensor.14_texas_smoker_vertical_lower_tray",
+    m4: "",
+    m5: "",
+    m6: "",
+    drive: "sensor.14_texas_smoker_drive_output",
+    setpoint: "sensor.14_texas_smoker_setpoint"
+  };
+  const POLL_MS = 35000;
+  const TREND_THRESHOLD = 1.2;
+  const LOW_AIR = 180;
+  const BIRD_MIN_MS = 65000;
+  const BIRD_MAX_MS = 115000;
+  const BIRD_DONE_MS = 2800;
+  const REAL_INTERVAL_MS = 120000;
+  const ACCEL_INTERVAL_MS = 3500;
+  const BIRD_VOICE = [
+    { type: "sine",     base: 580, span: 6.2, dur: 0.68, q: 3.4 },
+    { type: "triangle", base: 740, span: 6.5, dur: 0.58, q: 4.2 },
+    { type: "sine",     base: 920, span: 7.0, dur: 0.48, q: 5.2 },
+    { type: "triangle", base: 1080, span: 7.3, dur: 0.52, q: 4.6 },
+    { type: "sine",     base: 1260, span: 7.6, dur: 0.40, q: 5.8 },
+    { type: "triangle", base: 1420, span: 7.9, dur: 0.46, q: 5.0 }
+  ];
+  let settings = JSON.parse(JSON.stringify(DEFAULTS));
+  try {
+    const saved = JSON.parse(localStorage.getItem("smoker-audio-settings") || "{}");
+    Object.assign(settings, saved);
+    if (saved.labels) Object.assign(settings.labels, saved.labels);
+    if (saved.targets) Object.assign(settings.targets, saved.targets);
+    if (saved.stages) Object.assign(settings.stages, saved.stages);
+  } catch(e) {}
+
+  // Ensure stages is a proper object and every probe has a stages array
+  if (!settings.stages || typeof settings.stages !== "object") {
+    settings.stages = {};
+  }
+  ["m1","m2","m3","m4","m5","m6"].forEach(k => {
+    if (!Array.isArray(settings.stages[k]) || settings.stages[k].length === 0) {
+      const t = (settings.targets && settings.targets[k]) || 0;
+      settings.stages[k] = [{ duration: 0, target: t }];
+    }
+  });
+
+  // Dynamic test series (null = use built-in SAMPLE)
+  let testSeries = null;
+  let scenarioName = "Built-in SAMPLE";
+  let seriesAirNominal = 225;
+  try {
+    const savedSeries = JSON.parse(localStorage.getItem("smoker-audio-testseries") || "null");
+    if (savedSeries && Array.isArray(savedSeries.series) && savedSeries.series.length) {
+      testSeries = savedSeries.series;
+      scenarioName = savedSeries.name || "Imported series";
+      seriesAirNominal = savedSeries.airNominal || 225;
+      if (savedSeries.labels) Object.assign(settings.labels, savedSeries.labels);
+      if (savedSeries.targets) Object.assign(settings.targets, savedSeries.targets);
+      // migrate targets into stages if stages not present in the import
+      if (savedSeries.targets) {
+        ["m1","m2","m3","m4","m5","m6"].forEach(k => {
+          const t = savedSeries.targets[k] || 0;
+          settings.stages[k] = [{ duration: 0, target: t }];
+        });
+      }
+    }
+  } catch(e) {}
+
+  let audioCtx = null, masterGain = null, running = false;
+  let values = { air:null, m1:null, m2:null, m3:null, m4:null, m5:null, m6:null, drive:null, setpoint:null };
+  let live = { m1:false, m2:false, m3:false, m4:false, m5:false, m6:false };
+  let done = { m1:false, m2:false, m3:false, m4:false, m5:false, m6:false };
+  let stageIdx = { m1:0, m2:0, m3:0, m4:0, m5:0, m6:0 };
+  let stageStartVirtual = { m1:0, m2:0, m3:0, m4:0, m5:0, m6:0 }; // virtual cook minutes when stage began
+  let currentVirtualMin = 0; // current cook time in minutes (series time or wall-clock)
+  let prevMeat = { m1:null, m2:null, m3:null, m4:null, m5:null, m6:null };
+  let meatTrend = { m1:0, m2:0, m3:0, m4:0, m5:0, m6:0 };
+  let totalHeat = { m1:0, m2:0, m3:0, m4:0, m5:0, m6:0 };
+  let lastSampleTime = null;
+  let prevAir = null;
+  let airTrend = 0;
+  let lastNoticeAt = 0;
+  let testIndex = 0;
+  let testTimer = null;
+  let cookStartWall = 0; // Date.now() when Start pressed (live mode)
+  let droneOsc, droneGain, droneFilter;
+  let noiseSource, noiseFilter, noiseGain;
+  let nextBirdTime = [0,0,0,0,0,0];
+  function saveSettings() {
+    localStorage.setItem("smoker-audio-settings", JSON.stringify(settings));
+  }
+  function applySettings() {
+    document.getElementById("tempsPanel").style.display = settings.showNumbers ? "grid" : "none";
+    document.getElementById("vol").value = settings.volume;
+    if (masterGain) {
+      masterGain.gain.setTargetAtTime(settings.audio ? settings.volume : 0, audioCtx?.currentTime || 0, 0.15);
+    }
+    document.getElementById("haUrl").value = settings.haUrl || "";
+    document.getElementById("haToken").value = settings.haToken || "";
+    document.getElementById("togAudio").classList.toggle("on", settings.audio);
+    document.getElementById("togNumbers").classList.toggle("on", settings.showNumbers);
+    document.getElementById("togTest").classList.toggle("on", settings.testMode);
+    document.getElementById("togAccel").classList.toggle("on", settings.accelerated);
+    ["air","drive","m1","m2","m3","m4","m5","m6"].forEach(k => {
+      const lab = document.getElementById("lab-" + k);
+      if (lab) lab.value = settings.labels[k] || DEFAULTS.labels[k];
+      const disp = document.getElementById("label-" + k);
+      if (disp) disp.textContent = settings.labels[k] || DEFAULTS.labels[k];
+    });
+    ["m1","m2","m3","m4","m5","m6"].forEach(k => {
+      const t = document.getElementById("tgt-" + k);
+      if (t) t.value = settings.targets[k] ?? 0;
+    });
+    const scenEl = document.getElementById("scenarioLabel");
+    if (scenEl) {
+      const n = testSeries ? testSeries.length : SAMPLE.length;
+      scenEl.textContent = `${scenarioName} · ${n} steps`;
+    }
+  }
+  // UI handlers
+  document.getElementById("settingsBtn").onclick = () => {
+    document.getElementById("settingsPanel").classList.add("open");
+    applySettings();
+  };
+  document.getElementById("settingsClose").onclick = () => {
+    settings.haUrl = document.getElementById("haUrl").value.trim() || DEFAULTS.haUrl;
+    settings.haToken = document.getElementById("haToken").value.trim();
+    settings.volume = parseFloat(document.getElementById("vol").value);
+    ["air","drive","m1","m2","m3","m4","m5","m6"].forEach(k => {
+      settings.labels[k] = document.getElementById("lab-" + k).value.trim() || DEFAULTS.labels[k];
+    });
+    ["m1","m2","m3","m4","m5","m6"].forEach(k => {
+      const v = parseFloat(document.getElementById("tgt-" + k).value);
+      const tgt = isNaN(v) ? 0 : v;
+      settings.targets[k] = tgt;
+      // Editing the simple target resets that probe to a single-stage definition
+      if (!settings.stages || typeof settings.stages !== "object") settings.stages = {};
+      settings.stages[k] = [{ duration: 0, target: tgt }];
+    });
+    saveSettings();
+    applySettings();
+    document.getElementById("settingsPanel").classList.remove("open");
+  };
+  document.getElementById("settingsPanel").onclick = e => {
+    if (e.target.id === "settingsPanel") document.getElementById("settingsClose").click();
+  };
+  document.getElementById("helpBtn").onclick = () => document.getElementById("helpPanel").classList.add("open");
+  document.getElementById("helpClose").onclick = () => document.getElementById("helpPanel").classList.remove("open");
+  document.getElementById("helpPanel").onclick = e => {
+    if (e.target.id === "helpPanel") document.getElementById("helpClose").click();
+  };
+  document.getElementById("togAudio").onclick = () => { settings.audio = !settings.audio; saveSettings(); applySettings(); };
+  document.getElementById("togNumbers").onclick = () => { settings.showNumbers = !settings.showNumbers; saveSettings(); applySettings(); };
+  document.getElementById("togTest").onclick = () => { settings.testMode = !settings.testMode; saveSettings(); applySettings(); };
+  document.getElementById("togAccel").onclick = () => { settings.accelerated = !settings.accelerated; saveSettings(); applySettings(); };
+  document.getElementById("vol").oninput = () => {
+    settings.volume = parseFloat(document.getElementById("vol").value);
+    saveSettings();
+    if (masterGain && settings.audio) masterGain.gain.setTargetAtTime(settings.volume, audioCtx.currentTime, 0.1);
+  };
+  document.getElementById("resetHeatBtn").onclick = () => {
+    totalHeat = { m1:0, m2:0, m3:0, m4:0, m5:0, m6:0 };
+    lastSampleTime = Date.now();
+  };
+
+  // ========== TEST SERIES IMPORT / EXPORT ==========
+  function saveTestSeries() {
+    if (!testSeries) {
+      localStorage.removeItem("smoker-audio-testseries");
+      return;
+    }
+    localStorage.setItem("smoker-audio-testseries", JSON.stringify({
+      name: scenarioName,
+      airNominal: seriesAirNominal,
+      labels: settings.labels,
+      targets: settings.targets,
+      series: testSeries
+    }));
+  }
+
+  function parseWorkbook(wb) {
+    // --- Config sheet ---
+    let name = "Imported series";
+    let airNom = 225;
+    const labels = { ...settings.labels };
+    const targets = { ...settings.targets };
+    if (wb.Sheets["Config"]) {
+      const cfg = XLSX.utils.sheet_to_json(wb.Sheets["Config"], { header: 1, defval: null });
+      for (let r = 0; r < cfg.length; r++) {
+        const row = cfg[r];
+        if (!row || !row[0]) continue;
+        const key = String(row[0]).trim().toLowerCase();
+        if (key === "scenario name" && row[1]) name = String(row[1]).trim();
+        if (key === "air temp nominal" && row[1] != null) airNom = parseFloat(row[1]) || 225;
+      }
+      // Probe table starts after a row that has "Probe #"
+      let probeStart = -1;
+      for (let r = 0; r < cfg.length; r++) {
+        if (cfg[r] && String(cfg[r][0]).trim().toLowerCase() === "probe #") {
+          probeStart = r + 1;
+          break;
+        }
+      }
+      if (probeStart > 0) {
+        for (let i = 0; i < 6; i++) {
+          const row = cfg[probeStart + i];
+          if (!row) continue;
+          const key = "m" + (i + 1);
+          const pName = row[1] != null && String(row[1]).trim() ? String(row[1]).trim() : null;
+          const tgt = row[2] != null ? parseFloat(row[2]) : NaN;
+          const active = row[3] != null ? Number(row[3]) : 1;
+          if (pName) labels[key] = pName;
+          if (!isNaN(tgt)) targets[key] = active ? tgt : 0;
+        }
+      }
+    }
+
+    // --- Series sheet ---
+    const series = [];
+    if (wb.Sheets["Series"]) {
+      const raw = XLSX.utils.sheet_to_json(wb.Sheets["Series"], { header: 1, defval: null });
+      // Find header row containing "Time_min"
+      let headerRow = -1;
+      let col = {};
+      for (let r = 0; r < raw.length; r++) {
+        const row = raw[r];
+        if (!row) continue;
+        for (let c = 0; c < row.length; c++) {
+          const h = String(row[c] || "").trim().toLowerCase();
+          if (h === "time_min" || h === "time") {
+            headerRow = r;
+            col.t = c;
+          }
+          if (h === "airtemp_f" || h === "air" || h === "air_temp") col.air = c;
+          if (h === "probe1_f" || h === "m1" || h === "probe1") col.m1 = c;
+          if (h === "probe2_f" || h === "m2" || h === "probe2") col.m2 = c;
+          if (h === "probe3_f" || h === "m3" || h === "probe3") col.m3 = c;
+          if (h === "probe4_f" || h === "m4" || h === "probe4") col.m4 = c;
+          if (h === "probe5_f" || h === "m5" || h === "probe5") col.m5 = c;
+          if (h === "probe6_f" || h === "m6" || h === "probe6") col.m6 = c;
+          if (h === "drive" || h === "drive_%" || h === "drive_pct") col.drive = c;
+          if (h === "setpoint" || h === "sp" || h === "setpoint_f") col.sp = c;
+          if (h === "event_note" || h === "note" || h === "event") col.note = c;
+        }
+        if (headerRow >= 0) break;
+      }
+      if (headerRow < 0) throw new Error("Series sheet: no Time_min header found");
+      for (let r = headerRow + 1; r < raw.length; r++) {
+        const row = raw[r];
+        if (!row || row[col.t] == null || row[col.t] === "") continue;
+        const t = parseFloat(row[col.t]);
+        if (isNaN(t)) continue;
+        function cell(c) {
+          if (c == null || row[c] == null || row[c] === "") return null;
+          const v = parseFloat(row[c]);
+          return isNaN(v) ? null : v;
+        }
+        series.push({
+          t: t,
+          air: cell(col.air),
+          sp: cell(col.sp) != null ? cell(col.sp) : airNom,
+          drive: cell(col.drive) != null ? cell(col.drive) : 30,
+          m1: cell(col.m1), m2: cell(col.m2), m3: cell(col.m3),
+          m4: cell(col.m4), m5: cell(col.m5), m6: cell(col.m6),
+          note: col.note != null && row[col.note] != null ? String(row[col.note]) : ""
+        });
+      }
+    }
+    if (!series.length) throw new Error("No valid rows found in Series sheet");
+    return { name, airNom, labels, targets, series };
+  }
+
+  document.getElementById("importBtn").onclick = () => {
+    document.getElementById("importFile").click();
+  };
+
+  document.getElementById("importFile").onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(data, { type: "array" });
+      const parsed = parseWorkbook(wb);
+      testSeries = parsed.series;
+      scenarioName = parsed.name;
+      seriesAirNominal = parsed.airNom;
+      Object.assign(settings.labels, parsed.labels);
+      Object.assign(settings.targets, parsed.targets);
+      saveSettings();
+      saveTestSeries();
+      applySettings();
+      document.getElementById("status").textContent = `Imported “${scenarioName}” · ${testSeries.length} steps`;
+    } catch (err) {
+      document.getElementById("status").textContent = "Import failed: " + err.message;
+      console.error(err);
+    }
+    e.target.value = "";
+  };
+
+  document.getElementById("exportBtn").onclick = () => {
+    const series = testSeries || SAMPLE.map((row, i) => ({
+      t: i * 2, // artificial minutes for built-in
+      air: row.air, sp: row.sp, drive: row.drive,
+      m1: row.m1, m2: row.m2, m3: row.m3, m4: row.m4, m5: row.m5, m6: row.m6,
+      note: ""
+    }));
+    const name = testSeries ? scenarioName : "Built-in SAMPLE";
+    // Build a minimal workbook matching the template shape
+    const wb = XLSX.utils.book_new();
+    // Config
+    const cfgData = [
+      ["SMOKER CONFIG"],
+      [],
+      ["Parameter", "Value", "Unit / Notes"],
+      ["Scenario Name", name, ""],
+      ["Air Temp Nominal", seriesAirNominal, "°F"],
+      ["Number of Probes", 6, ""],
+      [],
+      ["Probe #", "Name", "Target °F", "Active (1/0)", "Notes"]
+    ];
+    for (let i = 1; i <= 6; i++) {
+      const k = "m" + i;
+      cfgData.push([i, settings.labels[k] || ("Meat " + i), settings.targets[k] || 0, settings.targets[k] > 0 ? 1 : 0, ""]);
+    }
+    const wsCfg = XLSX.utils.aoa_to_sheet(cfgData);
+    XLSX.utils.book_append_sheet(wb, wsCfg, "Config");
+    // Series
+    const serData = [
+      ["TIME SERIES — Temperature snapshots (°F)"],
+      [],
+      [],
+      ["Time_min", "AirTemp_F", "Probe1_F", "Probe2_F", "Probe3_F", "Probe4_F", "Probe5_F", "Probe6_F", "Drive", "Setpoint", "Event_Note"]
+    ];
+    series.forEach(r => {
+      serData.push([
+        r.t, r.air, r.m1, r.m2, r.m3, r.m4, r.m5, r.m6,
+        r.drive, r.sp, r.note || ""
+      ]);
+    });
+    const wsSer = XLSX.utils.aoa_to_sheet(serData);
+    XLSX.utils.book_append_sheet(wb, wsSer, "Series");
+    XLSX.writeFile(wb, (name.replace(/[^\w\-]+/g, "_") || "smoker_series") + ".xlsx");
+  };
+
+  // ========== AUDIO ==========
+  function initAudio() {
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = settings.audio ? settings.volume : 0;
+    masterGain.connect(audioCtx.destination);
+    droneOsc = audioCtx.createOscillator();
+    droneGain = audioCtx.createGain();
+    droneFilter = audioCtx.createBiquadFilter();
+    droneOsc.type = "sine";
+    droneOsc.frequency.value = 52;
+    droneFilter.type = "lowpass";
+    droneFilter.frequency.value = 400;
+    droneGain.gain.value = 0.18;
+    droneOsc.connect(droneFilter);
+    droneFilter.connect(droneGain);
+    droneGain.connect(masterGain);
+    droneOsc.start();
+    const bufferSize = audioCtx.sampleRate * 2;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    noiseSource = audioCtx.createBufferSource();
+    noiseSource.buffer = buffer;
+    noiseSource.loop = true;
+    noiseFilter = audioCtx.createBiquadFilter();
+    noiseFilter.type = "bandpass";
+    noiseFilter.frequency.value = 700;
+    noiseFilter.Q.value = 0.6;
+    noiseGain = audioCtx.createGain();
+    noiseGain.gain.value = 0;
+    noiseSource.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(masterGain);
+    noiseSource.start();
+    const now = Date.now();
+    for (let i = 0; i < 6; i++) {
+      nextBirdTime[i] = now + 8000 + i * 11000 + Math.random() * 10000;
+    }
+  }
+  function playNotice(direction, strong) {
+    if (!audioCtx || !settings.audio) return;
+    const now = audioCtx.currentTime;
+    const base = droneOsc.frequency.value;
+    const bend = direction > 0 ? (strong ? 7 : 4) : (strong ? -8 : -4);
+    const bright = direction > 0 ? (strong ? 900 : 650) : (strong ? 220 : 300);
+    droneOsc.frequency.cancelScheduledValues(now);
+    droneOsc.frequency.setValueAtTime(base, now);
+    droneOsc.frequency.linearRampToValueAtTime(base + bend, now + 0.35);
+    droneOsc.frequency.linearRampToValueAtTime(base, now + 1.1);
+    droneFilter.frequency.cancelScheduledValues(now);
+    droneFilter.frequency.setValueAtTime(droneFilter.frequency.value, now);
+    droneFilter.frequency.linearRampToValueAtTime(bright, now + 0.3);
+    droneFilter.frequency.linearRampToValueAtTime(400, now + 1.2);
+  }
+  function playBird(index) {
+    if (!audioCtx || !settings.audio || !running) return;
+    const keys = ["m1","m2","m3","m4","m5","m6"];
+    const key = keys[index];
+    if (!live[key]) return;
+    const temp = values[key];
+    if (temp == null || temp < 40) return;
+    const voice = BIRD_VOICE[index];
+    const trend = meatTrend[key];
+    const isDone = done[key];
+    const now = audioCtx.currentTime;
+
+    // Base frequency from temperature + small random offset
+    const jitter = 0.93 + Math.random() * 0.14;
+    let startFreq = Math.max(480, Math.min(1950, (voice.base + (temp - 150) * voice.span) * jitter));
+
+    // Stronger contour based on trend / done
+    let contour = 1.0;
+    if (isDone) contour = 1.40 + Math.random() * 0.08;
+    else if (trend > 0) contour = 1.30 + Math.random() * 0.06;
+    else if (trend < 0) contour = 0.68 + Math.random() * 0.06;
+    else contour = 1.05 + Math.random() * 0.04;
+
+    const levelBase = (isDone ? 0.13 : 0.078) * (0.88 + Math.random() * 0.24);
+    const q = voice.q * (0.85 + Math.random() * 0.3);
+
+    // Distinct call shapes for the three rib racks (index 0/1/2)
+    // 0 = short sharp single chirp
+    // 1 = two-note rising tweet
+    // 2 = longer downward-sliding call
+    // 3+ = simple single call (fallback)
+
+    function makeOscPair(freq, dur, level, type1, type2, detuneAmt) {
+      const osc1 = audioCtx.createOscillator();
+      const gain1 = audioCtx.createGain();
+      const filter = audioCtx.createBiquadFilter();
+      osc1.type = type1 || voice.type;
+      filter.type = "bandpass";
+      filter.frequency.value = freq;
+      filter.Q.value = q;
+
+      const osc2 = audioCtx.createOscillator();
+      const gain2 = audioCtx.createGain();
+      osc2.type = type2 || (voice.type === "sine" ? "triangle" : "sine");
+      const detune = 1.0 + (detuneAmt || 0.01);
+
+      const attack = 0.015 + Math.random() * 0.018;
+      gain1.gain.setValueAtTime(0, now);
+      gain1.gain.linearRampToValueAtTime(level, now + attack);
+      gain1.gain.linearRampToValueAtTime(level * 0.6, now + dur * 0.4);
+      gain1.gain.linearRampToValueAtTime(0, now + dur);
+
+      gain2.gain.setValueAtTime(0, now);
+      gain2.gain.linearRampToValueAtTime(level * 0.35, now + attack);
+      gain2.gain.linearRampToValueAtTime(level * 0.2, now + dur * 0.4);
+      gain2.gain.linearRampToValueAtTime(0, now + dur);
+
+      osc1.connect(filter);
+      filter.connect(gain1);
+      gain1.connect(masterGain);
+      osc2.connect(gain2);
+      gain2.connect(masterGain);
+
+      return { osc1, osc2, detune, dur };
+    }
+
+    if (index === 0) {
+      // Meat 1 — short sharp single chirp
+      const dur = (isDone ? 0.28 : 0.38) * (0.9 + Math.random() * 0.2);
+      const endFreq = startFreq * contour;
+      const pair = makeOscPair(startFreq, dur, levelBase, "sine", "triangle", 0.012);
+      pair.osc1.frequency.setValueAtTime(startFreq, now);
+      pair.osc1.frequency.linearRampToValueAtTime(endFreq, now + dur * 0.7);
+      pair.osc2.frequency.setValueAtTime(startFreq * pair.detune, now);
+      pair.osc2.frequency.linearRampToValueAtTime(endFreq * pair.detune, now + dur * 0.7);
+      pair.osc1.start(now); pair.osc2.start(now);
+      pair.osc1.stop(now + dur + 0.05); pair.osc2.stop(now + dur + 0.05);
+
+    } else if (index === 1) {
+      // Meat 2 — two-note rising tweet
+      const note1 = (isDone ? 0.18 : 0.22) * (0.9 + Math.random() * 0.15);
+      const gap = 0.06 + Math.random() * 0.04;
+      const note2 = (isDone ? 0.22 : 0.28) * (0.9 + Math.random() * 0.15);
+      const f1 = startFreq;
+      const f2 = startFreq * (contour > 1 ? contour : 1.18);
+
+      // first note
+      const p1 = makeOscPair(f1, note1, levelBase * 0.9, "triangle", "sine", 0.01);
+      p1.osc1.frequency.setValueAtTime(f1, now);
+      p1.osc1.frequency.linearRampToValueAtTime(f1 * 1.04, now + note1 * 0.6);
+      p1.osc2.frequency.setValueAtTime(f1 * p1.detune, now);
+      p1.osc1.start(now); p1.osc2.start(now);
+      p1.osc1.stop(now + note1 + 0.04); p1.osc2.stop(now + note1 + 0.04);
+
+      // second note (higher)
+      const t2 = now + note1 + gap;
+      const p2 = makeOscPair(f2, note2, levelBase, "triangle", "sine", 0.012);
+      p2.osc1.frequency.setValueAtTime(f2, t2);
+      p2.osc1.frequency.linearRampToValueAtTime(f2 * contour, t2 + note2 * 0.7);
+      p2.osc2.frequency.setValueAtTime(f2 * p2.detune, t2);
+      p2.osc1.start(t2); p2.osc2.start(t2);
+      p2.osc1.stop(t2 + note2 + 0.04); p2.osc2.stop(t2 + note2 + 0.04);
+
+    } else if (index === 2) {
+      // Meat 3 — longer downward-sliding call
+      const dur = (isDone ? 0.55 : 0.72) * (0.88 + Math.random() * 0.22);
+      const endFreq = startFreq * (contour < 1 ? contour : 0.72);
+      const pair = makeOscPair(startFreq, dur, levelBase * 0.95, "sine", "triangle", 0.015);
+      pair.osc1.frequency.setValueAtTime(startFreq, now);
+      pair.osc1.frequency.linearRampToValueAtTime(startFreq * 1.08, now + dur * 0.25);
+      pair.osc1.frequency.linearRampToValueAtTime(endFreq, now + dur * 0.85);
+      pair.osc2.frequency.setValueAtTime(startFreq * pair.detune, now);
+      pair.osc2.frequency.linearRampToValueAtTime(endFreq * pair.detune, now + dur * 0.85);
+      pair.osc1.start(now); pair.osc2.start(now);
+      pair.osc1.stop(now + dur + 0.06); pair.osc2.stop(now + dur + 0.06);
+
+    } else {
+      // Fallback for probes 4–6 — simple single call
+      const dur = (isDone ? voice.dur * 0.75 : voice.dur) * (0.85 + Math.random() * 0.25);
+      const endFreq = startFreq * contour;
+      const pair = makeOscPair(startFreq, dur, levelBase, voice.type, null, 0.01);
+      pair.osc1.frequency.setValueAtTime(startFreq, now);
+      pair.osc1.frequency.linearRampToValueAtTime(endFreq, now + dur * 0.8);
+      pair.osc2.frequency.setValueAtTime(startFreq * pair.detune, now);
+      pair.osc2.frequency.linearRampToValueAtTime(endFreq * pair.detune, now + dur * 0.8);
+      pair.osc1.start(now); pair.osc2.start(now);
+      pair.osc1.stop(now + dur + 0.05); pair.osc2.stop(now + dur + 0.05);
+    }
+  }
+  function scheduleBirds() {
+    if (!running) return;
+    const now = Date.now();
+    for (let i = 0; i < 6; i++) {
+      if (now >= nextBirdTime[i]) {
+        playBird(i);
+        const key = ["m1","m2","m3","m4","m5","m6"][i];
+        if (done[key]) {
+          nextBirdTime[i] = now + BIRD_DONE_MS + Math.random() * 800;
+        } else {
+          nextBirdTime[i] = now + BIRD_MIN_MS + Math.random() * (BIRD_MAX_MS - BIRD_MIN_MS);
+        }
+      }
+    }
+  }
+  function updateAudio() {
+    if (!audioCtx || !running) return;
+    const t = audioCtx.currentTime;
+    if (values.air != null) {
+      const freq = 40 + (values.air - 140) * 0.16;
+      droneOsc.frequency.setTargetAtTime(Math.max(36, Math.min(90, freq)), t, 2.0);
+    }
+    const drive = Math.max(0, Math.min(100, values.drive || 0));
+    noiseGain.gain.setTargetAtTime((drive / 100) * 0.08, t, 1.3);
+    noiseFilter.frequency.setTargetAtTime(480 + drive * 11, t, 1.4);
+  }
+  function updateVisibility() {
+    ["m1","m2","m3","m4","m5","m6"].forEach(k => {
+      const show = live[k];
+      const row = document.getElementById("row-" + k);
+      if (row) {
+        row.style.display = show ? "flex" : "none";
+        row.classList.toggle("done", !!done[k]);
+      }
+    });
+  }
+  function getStages(k) {
+    const s = (settings.stages && settings.stages[k]);
+    if (Array.isArray(s) && s.length > 0) return s;
+    const t = (settings.targets && settings.targets[k]) || 0;
+    return [{ duration: 0, target: t }];
+  }
+
+  function playStageTransition(index) {
+    if (!audioCtx || !settings.audio || !running) return;
+    const voice = BIRD_VOICE[index];
+    const now = audioCtx.currentTime;
+    // Distinct short double motif: higher, brighter, two quick pulses
+    for (let p = 0; p < 2; p++) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      const filter = audioCtx.createBiquadFilter();
+      osc.type = "triangle";
+      filter.type = "bandpass";
+      const base = voice.base * 1.35;
+      filter.frequency.value = base;
+      filter.Q.value = 6.5;
+      const t0 = now + p * 0.22;
+      const dur = 0.18;
+      gain.gain.setValueAtTime(0, t0);
+      gain.gain.linearRampToValueAtTime(0.14, t0 + 0.02);
+      gain.gain.linearRampToValueAtTime(0, t0 + dur);
+      osc.frequency.setValueAtTime(base, t0);
+      osc.frequency.linearRampToValueAtTime(base * 1.25, t0 + dur * 0.7);
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(masterGain);
+      osc.start(t0);
+      osc.stop(t0 + dur + 0.05);
+    }
+  }
+
+  function checkStages() {
+    const keys = ["m1","m2","m3","m4","m5","m6"];
+    keys.forEach((k, i) => {
+      try {
+        if (!live[k] || done[k]) return;
+        const stages = getStages(k);
+        let idx = stageIdx[k] || 0;
+        if (idx >= stages.length) {
+          done[k] = true;
+          return;
+        }
+        const st = stages[idx] || { duration: 0, target: 0 };
+        const elapsed = currentVirtualMin - (stageStartVirtual[k] || 0);
+        let ended = false;
+        if (st.duration > 0 && elapsed >= st.duration) ended = true;
+        if (st.target > 0 && values[k] != null && values[k] >= st.target) ended = true;
+        if (ended) {
+          const isFinal = (idx >= stages.length - 1);
+          playStageTransition(i);
+          if (isFinal) {
+            done[k] = true;
+            // Force rapid calling to start almost immediately (fixes previous lag)
+            nextBirdTime[i] = Date.now() + 600 + Math.random() * 400;
+          } else {
+            stageIdx[k] = idx + 1;
+            stageStartVirtual[k] = currentVirtualMin;
+            done[k] = false;
+          }
+        }
+      } catch (err) {
+        console.error("checkStages error for", k, err);
+      }
+    });
+  }
+
+  function applyReading(row, deltaMin) {
+    const now = Date.now();
+    const newAir = row.air;
+    const newM = { m1:row.m1, m2:row.m2, m3:row.m3, m4:row.m4, m5:row.m5, m6:row.m6 };
+
+    // Update virtual cook time
+    if (settings.testMode) {
+      // Prefer explicit Time_min from series when available
+      if (row.t != null) currentVirtualMin = row.t;
+      else currentVirtualMin += (deltaMin || 0);
+    } else {
+      currentVirtualMin = (now - cookStartWall) / 60000;
+    }
+
+    ["m1","m2","m3","m4","m5","m6"].forEach(k => {
+      const t = newM[k];
+      if (t != null && t > 40) {
+        live[k] = true;
+        if (deltaMin > 0) totalHeat[k] += t * deltaMin;
+        if (prevMeat[k] != null) {
+          const d = t - prevMeat[k];
+          if (d >= TREND_THRESHOLD) meatTrend[k] = 1;
+          else if (d <= -TREND_THRESHOLD) meatTrend[k] = -1;
+          else meatTrend[k] = 0;
+        }
+        prevMeat[k] = t;
+      } else {
+        live[k] = false;
+        done[k] = false;
+      }
+    });
+    values.m1 = newM.m1; values.m2 = newM.m2; values.m3 = newM.m3;
+    values.m4 = newM.m4; values.m5 = newM.m5; values.m6 = newM.m6;
+    values.drive = row.drive;
+    values.setpoint = row.sp;
+    if (newAir != null) {
+      if (prevAir != null) {
+        const delta = newAir - prevAir;
+        if (delta >= TREND_THRESHOLD) airTrend = 1;
+        else if (delta <= -TREND_THRESHOLD) airTrend = -1;
+        else airTrend = 0;
+        const below = newAir < LOW_AIR;
+        const interval = (airTrend < 0 && below) ? 45000 : 90000;
+        if (airTrend !== 0 && (now - lastNoticeAt > interval)) {
+          playNotice(airTrend, airTrend < 0 && below);
+          lastNoticeAt = now;
+        }
+      }
+      prevAir = newAir;
+      values.air = newAir;
+    }
+
+    // Stage end checks (time or temp, first met)
+    checkStages();
+
+    // ===== Display format =====
+    if (values.air != null) {
+      document.getElementById("air").textContent =
+        values.setpoint != null
+          ? `${values.air.toFixed(1)} → ${values.setpoint.toFixed(0)}`
+          : values.air.toFixed(1) + "°";
+    } else {
+      document.getElementById("air").textContent = "—";
+    }
+    document.getElementById("drive").textContent =
+      values.drive != null ? values.drive + "%" : "—";
+
+    ["m1","m2","m3","m4","m5","m6"].forEach(k => {
+      const el = document.getElementById(k);
+      if (!el) return;
+      if (values[k] != null) {
+        const stages = getStages(k);
+        const idx = stageIdx[k] || 0;
+        const st = stages[Math.min(idx, stages.length - 1)] || { duration: 0, target: 0 };
+        const heat = Math.round(totalHeat[k]).toLocaleString();
+        let txt = values[k].toFixed(1);
+        if (done[k]) {
+          txt += ` DONE`;
+        } else {
+          // Show the active end condition of the current stage
+          if (st.target > 0) txt += ` → ${st.target}`;
+          else if (st.duration > 0) {
+            const remain = Math.max(0, (st.duration || 0) - (currentVirtualMin - (stageStartVirtual[k] || 0)));
+            txt += `  ${remain.toFixed(0)}m`;
+          }
+          if (stages.length > 1) txt += `  S${idx + 1}`;
+        }
+        txt += ` (${heat})`;
+        el.textContent = txt;
+      } else {
+        el.textContent = "—";
+      }
+    });
+    updateVisibility();
+    updateAudio();
+    const liveCount = Object.values(live).filter(Boolean).length;
+    const doneCount = Object.values(done).filter(Boolean).length;
+    const mode = settings.testMode ? (settings.accelerated ? "Test · Accel" : "Test · Real") : "Live";
+    let status = `${mode} · ${liveCount} probe${liveCount===1?"":"s"}`;
+    if (doneCount) status += ` · ${doneCount} done`;
+    status += ` · ${new Date().toLocaleTimeString()}`;
+    document.getElementById("status").textContent = status;
+  }
+  // LIVE HA
+  async function fetchStates() {
+    if (settings.testMode) return;
+    if (!settings.haToken) {
+      document.getElementById("status").textContent = "No token set — open Settings";
+      return;
+    }
+    try {
+      const res = await fetch(`${settings.haUrl}/api/states`, {
+        headers: { Authorization: `Bearer ${settings.haToken}` }
+      });
+      if (res.status === 401) { document.getElementById("status").textContent = "Invalid token"; return; }
+      if (!res.ok) { document.getElementById("status").textContent = `Error: HTTP ${res.status}`; return; }
+      const states = await res.json();
+      const map = {};
+      states.forEach(s => map[s.entity_id] = s);
+      function num(id) {
+        const s = map[id];
+        if (!s || s.state === "unavailable" || s.state === "unknown") return null;
+        const v = parseFloat(s.state);
+        return isNaN(v) ? null : v;
+      }
+      const now = Date.now();
+      const deltaMin = lastSampleTime ? (now - lastSampleTime) / 60000 : 0;
+      lastSampleTime = now;
+      applyReading({
+        air: num(ENTITIES.air),
+        sp: num(ENTITIES.setpoint),
+        drive: num(ENTITIES.drive),
+        m1: num(ENTITIES.m1), m2: num(ENTITIES.m2), m3: num(ENTITIES.m3),
+        m4: num(ENTITIES.m4), m5: num(ENTITIES.m5), m6: num(ENTITIES.m6)
+      }, deltaMin);
+    } catch (err) {
+      document.getElementById("status").textContent = err.name === "TypeError"
+        ? "Cannot reach Home Assistant"
+        : "Error: " + err.message;
+    }
+  }
+  // TEST MODE
+  function getActiveSeries() {
+    return testSeries && testSeries.length ? testSeries : SAMPLE;
+  }
+  function advanceTest() {
+    if (!running || !settings.testMode) return;
+    const series = getActiveSeries();
+    if (testIndex >= series.length) {
+      document.getElementById("status").textContent = "Test complete · " + scenarioName;
+      stopTestTimer();
+      return;
+    }
+    const row = series[testIndex];
+    // Prefer real Δt from Time_min when present; otherwise fall back to 2 min
+    let deltaMin = 2;
+    if (row.t != null && testIndex > 0) {
+      const prev = series[testIndex - 1];
+      if (prev && prev.t != null) deltaMin = Math.max(0.01, row.t - prev.t);
+    }
+    // Normalize shape for applyReading (SAMPLE rows already match; imported ones too)
+    applyReading({
+      t: row.t,
+      air: row.air,
+      sp: row.sp != null ? row.sp : seriesAirNominal,
+      drive: row.drive != null ? row.drive : 30,
+      m1: row.m1, m2: row.m2, m3: row.m3, m4: row.m4, m5: row.m5, m6: row.m6
+    }, deltaMin);
+    testIndex++;
+  }
+  function startTestTimer() {
+    stopTestTimer();
+    const ms = settings.accelerated ? ACCEL_INTERVAL_MS : REAL_INTERVAL_MS;
+    testTimer = setInterval(advanceTest, ms);
+    advanceTest();
+  }
+  function stopTestTimer() {
+    if (testTimer) { clearInterval(testTimer); testTimer = null; }
+  }
+  // Start / Stop
+  document.getElementById("toggleBtn").onclick = async () => {
+    if (!running) {
+      live = { m1:false, m2:false, m3:false, m4:false, m5:false, m6:false };
+      done = { m1:false, m2:false, m3:false, m4:false, m5:false, m6:false };
+      stageIdx = { m1:0, m2:0, m3:0, m4:0, m5:0, m6:0 };
+      stageStartVirtual = { m1:0, m2:0, m3:0, m4:0, m5:0, m6:0 };
+      currentVirtualMin = 0;
+      cookStartWall = Date.now();
+      testIndex = 0;
+      initAudio();
+      if (audioCtx.state === "suspended") await audioCtx.resume();
+      running = true;
+      lastSampleTime = Date.now();
+      document.getElementById("toggleBtn").textContent = "Stop";
+      document.getElementById("toggleBtn").classList.add("active");
+      document.getElementById("status").textContent = "Starting…";
+      if (settings.testMode) {
+        startTestTimer();
+      } else {
+        fetchStates();
+        setInterval(fetchStates, POLL_MS);
+      }
+      setInterval(scheduleBirds, 1000);
+    } else {
+      running = false;
+      stopTestTimer();
+      document.getElementById("toggleBtn").textContent = "Start";
+      document.getElementById("toggleBtn").classList.remove("active");
+      if (masterGain) masterGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.4);
+      document.getElementById("status").textContent = "Stopped";
+    }
+  };
+  applySettings();
+})();
+</script>
+</body>
+</html>
