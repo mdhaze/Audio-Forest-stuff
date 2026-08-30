@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Smoker Audio v1.19</title>
+<title>Smoker Audio v1.20</title>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
   :root {
@@ -229,7 +229,7 @@
 </style>
 </head>
 <body>
-  <h1>Smoker Audio v1.19</h1>
+  <h1>Smoker Audio v1.20</h1>
   <div class="temps" id="tempsPanel">
     <div id="row-air"><span class="label" id="label-air">Air</span><span class="value" id="air">—</span></div>
     <div id="row-drive"><span class="label" id="label-drive">Drive</span><span class="value" id="drive">—</span></div>
@@ -305,7 +305,7 @@
       <h2>Sound Guide</h2>
       <div class="help-item">
         <div class="help-title">Deep drone</div>
-        <div class="help-desc">Air temperature. Continuous. Rising or falling produces a gentle bend.</div>
+        <div class="help-desc">Air temperature. Continuous low note plus a quiet octave so phone speakers can hear it. Rising or falling produces a gentle bend.</div>
       </div>
       <div class="help-item">
         <div class="help-title">Bird calls</div>
@@ -480,7 +480,7 @@
   let testIndex = 0;
   let testTimer = null;
   let cookStartWall = 0; // Date.now() when Start pressed (live mode)
-  let droneOsc, droneGain, droneFilter;
+  let droneOsc, droneOsc2, droneGain, droneGain2, droneFilter;
   let noiseSource, noiseFilter, noiseGain;
   let nextBirdTime = [0,0,0,0,0,0];
   function saveSettings() {
@@ -747,17 +747,25 @@
     masterGain.gain.value = settings.audio ? settings.volume : 0;
     masterGain.connect(audioCtx.destination);
     droneOsc = audioCtx.createOscillator();
+    droneOsc2 = audioCtx.createOscillator();
     droneGain = audioCtx.createGain();
+    droneGain2 = audioCtx.createGain();
     droneFilter = audioCtx.createBiquadFilter();
     droneOsc.type = "sine";
-    droneOsc.frequency.value = 52;
+    droneOsc2.type = "sine";
+    droneOsc.frequency.value = 58;
+    droneOsc2.frequency.value = 116;
     droneFilter.type = "lowpass";
-    droneFilter.frequency.value = 400;
-    droneGain.gain.value = 0.18;
+    droneFilter.frequency.value = 520;
+    droneGain.gain.value = 0.16;
+    droneGain2.gain.value = 0.07; // octave so small speakers can hear the pit
     droneOsc.connect(droneFilter);
     droneFilter.connect(droneGain);
     droneGain.connect(masterGain);
+    droneOsc2.connect(droneGain2);
+    droneGain2.connect(masterGain);
     droneOsc.start();
+    droneOsc2.start();
     const bufferSize = audioCtx.sampleRate * 2;
     const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
     const data = buffer.getChannelData(0);
@@ -784,16 +792,22 @@
     if (!audioCtx || !settings.audio) return;
     const now = audioCtx.currentTime;
     const base = droneOsc.frequency.value;
-    const bend = direction > 0 ? (strong ? 7 : 4) : (strong ? -8 : -4);
+    const bend = direction > 0 ? (strong ? 9 : 5) : (strong ? -11 : -6);
     const bright = direction > 0 ? (strong ? 900 : 650) : (strong ? 220 : 300);
     droneOsc.frequency.cancelScheduledValues(now);
     droneOsc.frequency.setValueAtTime(base, now);
     droneOsc.frequency.linearRampToValueAtTime(base + bend, now + 0.35);
     droneOsc.frequency.linearRampToValueAtTime(base, now + 1.1);
+    if (droneOsc2) {
+      droneOsc2.frequency.cancelScheduledValues(now);
+      droneOsc2.frequency.setValueAtTime(base * 2, now);
+      droneOsc2.frequency.linearRampToValueAtTime((base + bend) * 2, now + 0.35);
+      droneOsc2.frequency.linearRampToValueAtTime(base * 2, now + 1.1);
+    }
     droneFilter.frequency.cancelScheduledValues(now);
     droneFilter.frequency.setValueAtTime(droneFilter.frequency.value, now);
     droneFilter.frequency.linearRampToValueAtTime(bright, now + 0.3);
-    droneFilter.frequency.linearRampToValueAtTime(400, now + 1.2);
+    droneFilter.frequency.linearRampToValueAtTime(520, now + 1.2);
   }
   function playBird(index) {
     if (!audioCtx || !settings.audio || !running) return;
@@ -943,8 +957,11 @@
     if (!audioCtx || !running) return;
     const t = audioCtx.currentTime;
     if (values.air != null) {
-      const freq = 40 + (values.air - 140) * 0.16;
-      droneOsc.frequency.setTargetAtTime(Math.max(36, Math.min(90, freq)), t, 2.0);
+      // Map pit temp into a hearable low band. 180°F ≈ 62 Hz, 225°F ≈ 72 Hz.
+      const freq = 55 + (values.air - 140) * 0.22;
+      const f = Math.max(48, Math.min(95, freq));
+      droneOsc.frequency.setTargetAtTime(f, t, 2.0);
+      if (droneOsc2) droneOsc2.frequency.setTargetAtTime(f * 2, t, 2.0);
     }
     const drive = Math.max(0, Math.min(100, values.drive || 0));
     noiseGain.gain.setTargetAtTime((drive / 100) * 0.08, t, 1.3);
