@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   Audio Forest — Smoker Audio
-  VERSION: v1.32
+  VERSION: v1.33
   DATE:    2026-08-30
   Look here after renaming this file to index.html.
 -->
@@ -9,7 +9,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Smoker Audio v1.32</title>
+<title>Smoker Audio v1.33</title>
 <style>
   :root {
     --bg: #0c1219;
@@ -37,7 +37,37 @@
     letter-spacing: 0.25em;
     color: var(--dim);
     text-transform: uppercase;
-    margin-bottom: 16px;
+    margin-bottom: 10px;
+  }
+  .big-clock {
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+    margin: 4px 0 22px 0;
+  }
+  .big-clock .clock-now {
+    font-size: clamp(52px, 16vw, 84px);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+  .big-clock .clock-run {
+    font-size: clamp(40px, 12vw, 64px);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+    color: var(--accent);
+    margin-top: 10px;
+  }
+  .big-clock .clock-cap {
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-top: 6px;
   }
   .temps {
     display: grid;
@@ -240,7 +270,13 @@
 </style>
 </head>
 <body>
-  <h1>Smoker Audio v1.32</h1>
+  <h1>Smoker Audio v1.33</h1>
+  <div class="big-clock" id="bigClock">
+    <div class="clock-now" id="clockNow">--:--</div>
+    <div class="clock-cap">now</div>
+    <div class="clock-run" id="clockRun">—</div>
+    <div class="clock-cap" id="clockRunCap">minutes running</div>
+  </div>
   <div class="temps" id="tempsPanel">
     <div id="row-air"><span class="label" id="label-air">Air</span><span class="value" id="air">—</span></div>
     <div id="row-drive"><span class="label" id="label-drive">Drive</span><span class="value" id="drive">—</span></div>
@@ -349,7 +385,7 @@
     </div>
   </div>
 <script>
-// Audio Forest — Smoker Audio VERSION v1.32  (2026-08-30)
+// Audio Forest — Smoker Audio VERSION v1.33  (2026-08-30)
 (() => {
   function loadSheetJS() {
     return new Promise((resolve, reject) => {
@@ -1440,6 +1476,29 @@
   function stopTestTimer() {
     if (testTimer) { clearInterval(testTimer); testTimer = null; }
   }
+  function updateClock() {
+    const nowEl = document.getElementById("clockNow");
+    const runEl = document.getElementById("clockRun");
+    const capEl = document.getElementById("clockRunCap");
+    if (!nowEl || !runEl) return;
+    const d = new Date();
+    let h = d.getHours();
+    const m = d.getMinutes();
+    const ampm = h >= 12 ? "PM" : "AM";
+    h = h % 12;
+    if (h === 0) h = 12;
+    nowEl.textContent = h + ":" + String(m).padStart(2, "0") + " " + ampm;
+    if (running && cookStartWall) {
+      const mins = Math.max(0, Math.floor((Date.now() - cookStartWall) / 60000));
+      runEl.textContent = String(mins);
+      if (capEl) capEl.textContent = mins === 1 ? "minute running" : "minutes running";
+    } else {
+      runEl.textContent = "—";
+      if (capEl) capEl.textContent = "minutes running";
+    }
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
   // Start / Stop
   document.getElementById("toggleBtn").onclick = async () => {
     if (!running) {
@@ -1460,6 +1519,7 @@
       document.getElementById("toggleBtn").textContent = "Stop";
       document.getElementById("toggleBtn").classList.add("active");
       document.getElementById("status").textContent = "Starting…";
+      updateClock();
       if (settings.testMode) {
         startTestTimer();
       } else {
@@ -1475,6 +1535,7 @@
       document.getElementById("toggleBtn").classList.remove("active");
       silenceAudio();
       document.getElementById("status").textContent = "Stopped";
+      updateClock();
     }
   };
   applySettings();
