@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   Audio Forest — Smoker Audio
-  VERSION: v1.20
+  VERSION: v1.31
   DATE:    2026-08-30
   Look here after renaming this file to index.html.
 -->
@@ -9,8 +9,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Smoker Audio v1.20</title>
-<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<title>Smoker Audio v1.31</title>
 <style>
   :root {
     --bg: #0c1219;
@@ -114,7 +113,9 @@
     justify-content: center;
     z-index: 100;
     overflow-y: auto;
-    padding: 20px 0;
+    -webkit-overflow-scrolling: touch;
+    padding: 16px 12px;
+    align-items: flex-start;
   }
   .panel.open { display: flex; }
   .panel-card {
@@ -124,7 +125,11 @@
     padding: 22px 24px;
     width: 92%;
     max-width: 380px;
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     color: var(--ink);
+    margin: 0 auto;
   }
   .panel-card h2 {
     margin: 0 0 16px 0;
@@ -235,7 +240,7 @@
 </style>
 </head>
 <body>
-  <h1>Smoker Audio v1.20</h1>
+  <h1>Smoker Audio v1.31</h1>
   <div class="temps" id="tempsPanel">
     <div id="row-air"><span class="label" id="label-air">Air</span><span class="value" id="air">—</span></div>
     <div id="row-drive"><span class="label" id="label-drive">Drive</span><span class="value" id="drive">—</span></div>
@@ -310,12 +315,16 @@
     <div class="panel-card">
       <h2>Sound Guide</h2>
       <div class="help-item">
+        <div class="help-title">Liveness bongo</div>
+        <div class="help-desc">One short group of four or five soft hits, about once a minute. Means only that the program is still running. Not a bird, not temperature.</div>
+      </div>
+      <div class="help-item">
         <div class="help-title">Deep drone</div>
-        <div class="help-desc">Air temperature. Continuous low note plus a quiet octave so phone speakers can hear it. Rising or falling produces a gentle bend.</div>
+        <div class="help-desc">Air temperature. Continuous low note plus a quiet octave. Darker when the pit is low. Three brief breaks in the tone mean add wood (pit falling and well below setpoint). At most every two minutes.</div>
       </div>
       <div class="help-item">
         <div class="help-title">Bird calls</div>
-        <div class="help-desc">Only live meat probes sing. Distinct voices. Ending rises if climbing, falls if dropping.</div>
+        <div class="help-desc">Only live meat probes sing. Distinct voices. Ending rises if climbing, falls if dropping. If a probe is pulled or disconnected, that same voice complains in a short falling burst so you can learn which bird is which.</div>
       </div>
       <div class="help-item">
         <div class="help-title">Stage transition</div>
@@ -340,14 +349,18 @@
     </div>
   </div>
 <script>
-// Audio Forest — Smoker Audio VERSION v1.20  (2026-08-30)
+// Audio Forest — Smoker Audio VERSION v1.31  (2026-08-30)
 (() => {
-  window.addEventListener("error", e => {
-    const msg = (e && e.message) ? e.message : "unknown";
-    const status = document.getElementById("status");
-    if (status) status.textContent = "Script error: " + msg;
-    console.error("Audio Forest error:", e);
-  });
+  function loadSheetJS() {
+    return new Promise((resolve, reject) => {
+      if (window.XLSX) return resolve(window.XLSX);
+      const s = document.createElement("script");
+      s.src = "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js";
+      s.onload = () => window.XLSX ? resolve(window.XLSX) : reject(new Error("SheetJS loaded but XLSX missing"));
+      s.onerror = () => reject(new Error("Could not load SheetJS (need network for Import/Export)"));
+      document.head.appendChild(s);
+    });
+  }
   const SAMPLE = [
     { air:185, sp:225, drive:35, m1:65, m2:68, m3:null, m4:null, m5:null, m6:null },
     { air:192, sp:225, drive:40, m1:72, m2:74, m3:null, m4:null, m5:null, m6:null },
@@ -415,8 +428,10 @@
   const POLL_MS = 35000;
   const TREND_THRESHOLD = 1.2;
   const LOW_AIR = 180;
-  const BIRD_MIN_MS = 65000;
-  const BIRD_MAX_MS = 115000;
+  const WOOD_BELOW_SP = 15;       // °F under setpoint before "add wood" can fire
+  const WOOD_COOLDOWN_MS = 120000; // 2 minutes between three-break signals
+  const BIRD_MIN_MS = 15000;
+  const BIRD_MAX_MS = 60000;
   const BIRD_DONE_MS = 2800;
   const REAL_INTERVAL_MS = 120000;
   const ACCEL_INTERVAL_MS = 3500;
@@ -484,20 +499,25 @@
   let prevAir = null;
   let airTrend = 0;
   let lastNoticeAt = 0;
+  let lastWoodAt = 0;
+  let woodBreakUntil = 0; // audioCtx time; skip gain targeting while breaks play
   let testIndex = 0;
   let testTimer = null;
   let cookStartWall = 0; // Date.now() when Start pressed (live mode)
   let droneOsc, droneOsc2, droneGain, droneGain2, droneFilter;
   let noiseSource, noiseFilter, noiseGain;
+  let bongoNoiseBuf = null;
   let nextBirdTime = [0,0,0,0,0,0];
+  let nextBongoAt = 0;
+  let lastComplainAt = [0,0,0,0,0,0];
   function saveSettings() {
-    localStorage.setItem("smoker-audio-settings", JSON.stringify(settings));
+    try { localStorage.setItem("smoker-audio-settings", JSON.stringify(settings)); } catch (e) {}
   }
   function applySettings() {
     document.getElementById("tempsPanel").style.display = settings.showNumbers ? "grid" : "none";
     document.getElementById("vol").value = settings.volume;
-    if (masterGain) {
-      masterGain.gain.setTargetAtTime(settings.audio ? settings.volume : 0, audioCtx?.currentTime || 0, 0.15);
+    if (masterGain && running) {
+      masterGain.gain.setTargetAtTime(settings.audio ? settings.volume : 0, audioCtx.currentTime, 0.15);
     }
     document.getElementById("haUrl").value = settings.haUrl || "";
     document.getElementById("haToken").value = settings.haToken || "";
@@ -560,7 +580,7 @@
   document.getElementById("vol").oninput = () => {
     settings.volume = parseFloat(document.getElementById("vol").value);
     saveSettings();
-    if (masterGain && settings.audio) masterGain.gain.setTargetAtTime(settings.volume, audioCtx.currentTime, 0.1);
+    if (running && masterGain && settings.audio) masterGain.gain.setTargetAtTime(settings.volume, audioCtx.currentTime, 0.1);
   };
   document.getElementById("resetHeatBtn").onclick = () => {
     totalHeat = { m1:0, m2:0, m3:0, m4:0, m5:0, m6:0 };
@@ -569,17 +589,19 @@
 
   // ========== TEST SERIES IMPORT / EXPORT ==========
   function saveTestSeries() {
-    if (!testSeries) {
-      localStorage.removeItem("smoker-audio-testseries");
-      return;
-    }
-    localStorage.setItem("smoker-audio-testseries", JSON.stringify({
-      name: scenarioName,
-      airNominal: seriesAirNominal,
-      labels: settings.labels,
-      targets: settings.targets,
-      series: testSeries
-    }));
+    try {
+      if (!testSeries) {
+        localStorage.removeItem("smoker-audio-testseries");
+        return;
+      }
+      localStorage.setItem("smoker-audio-testseries", JSON.stringify({
+        name: scenarioName,
+        airNominal: seriesAirNominal,
+        labels: settings.labels,
+        targets: settings.targets,
+        series: testSeries
+      }));
+    } catch (e) {}
   }
 
   function parseWorkbook(wb) {
@@ -682,6 +704,7 @@
     const file = e.target.files[0];
     if (!file) return;
     try {
+      const XLSX = await loadSheetJS();
       const data = await file.arrayBuffer();
       const wb = XLSX.read(data, { type: "array" });
       const parsed = parseWorkbook(wb);
@@ -701,7 +724,14 @@
     e.target.value = "";
   };
 
-  document.getElementById("exportBtn").onclick = () => {
+  document.getElementById("exportBtn").onclick = async () => {
+    let XLSX;
+    try {
+      XLSX = await loadSheetJS();
+    } catch (err) {
+      document.getElementById("status").textContent = "Export failed: " + err.message;
+      return;
+    }
     const series = testSeries || SAMPLE.map((row, i) => ({
       t: i * 2, // artificial minutes for built-in
       air: row.air, sp: row.sp, drive: row.drive,
@@ -747,8 +777,55 @@
   };
 
   // ========== AUDIO ==========
+  function zeroGain(g, t) {
+    if (!g) return;
+    try {
+      g.gain.cancelScheduledValues(t);
+      g.gain.setValueAtTime(0, t);
+    } catch (e) {}
+  }
+  function silenceAudio() {
+    if (!audioCtx) return;
+    const t = audioCtx.currentTime;
+    zeroGain(masterGain, t);
+    zeroGain(noiseGain, t);
+    zeroGain(droneGain, t);
+    zeroGain(droneGain2, t);
+    if (noiseSource) {
+      try { noiseSource.stop(); } catch (e) {}
+      noiseSource = null;
+    }
+  }
+  function startNoiseLoop() {
+    if (!audioCtx || noiseSource) return;
+    if (!bongoNoiseBuf) return;
+    noiseSource = audioCtx.createBufferSource();
+    noiseSource.buffer = bongoNoiseBuf;
+    noiseSource.loop = true;
+    if (!noiseFilter) {
+      noiseFilter = audioCtx.createBiquadFilter();
+      noiseFilter.type = "bandpass";
+      noiseFilter.frequency.value = 700;
+      noiseFilter.Q.value = 0.6;
+    }
+    if (!noiseGain) {
+      noiseGain = audioCtx.createGain();
+      noiseGain.gain.value = 0;
+      noiseFilter.connect(noiseGain);
+      noiseGain.connect(masterGain);
+    }
+    noiseSource.connect(noiseFilter);
+    noiseSource.start();
+  }
   function initAudio() {
-    if (audioCtx) return;
+    if (audioCtx) {
+      startNoiseLoop();
+      if (masterGain) masterGain.gain.setValueAtTime(settings.audio ? settings.volume : 0, audioCtx.currentTime);
+      if (droneGain) droneGain.gain.setValueAtTime(0.16, audioCtx.currentTime);
+      if (droneGain2) droneGain2.gain.setValueAtTime(0.07, audioCtx.currentTime);
+      nextBongoAt = Date.now() + 2000;
+      return;
+    }
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     masterGain = audioCtx.createGain();
     masterGain.gain.value = settings.audio ? settings.volume : 0;
@@ -790,7 +867,9 @@
     noiseFilter.connect(noiseGain);
     noiseGain.connect(masterGain);
     noiseSource.start();
+    bongoNoiseBuf = buffer;
     const now = Date.now();
+    nextBongoAt = now + 2000;
     for (let i = 0; i < 6; i++) {
       nextBirdTime[i] = now + 8000 + i * 11000 + Math.random() * 10000;
     }
@@ -816,30 +895,128 @@
     droneFilter.frequency.linearRampToValueAtTime(bright, now + 0.3);
     droneFilter.frequency.linearRampToValueAtTime(520, now + 1.2);
   }
-  function playBird(index) {
+  function playWoodBreaks() {
+    if (!audioCtx || !settings.audio || !running || !droneGain) return;
+    const now = audioCtx.currentTime;
+    const g1 = droneGain.gain.value;
+    const g2 = droneGain2 ? droneGain2.gain.value : 0;
+    droneGain.gain.cancelScheduledValues(now);
+    droneGain.gain.setValueAtTime(g1, now);
+    if (droneGain2) {
+      droneGain2.gain.cancelScheduledValues(now);
+      droneGain2.gain.setValueAtTime(g2, now);
+    }
+    // Three breaks: sound — gap — sound — gap — sound — gap — restore
+    let t = now + 0.05;
+    for (let i = 0; i < 3; i++) {
+      droneGain.gain.linearRampToValueAtTime(0.0001, t + 0.04);
+      droneGain.gain.setValueAtTime(0.0001, t + 0.16);
+      droneGain.gain.linearRampToValueAtTime(g1, t + 0.20);
+      droneGain.gain.setValueAtTime(g1, t + 0.38);
+      if (droneGain2) {
+        droneGain2.gain.linearRampToValueAtTime(0.0001, t + 0.04);
+        droneGain2.gain.setValueAtTime(0.0001, t + 0.16);
+        droneGain2.gain.linearRampToValueAtTime(g2, t + 0.20);
+        droneGain2.gain.setValueAtTime(g2, t + 0.38);
+      }
+      t += 0.40;
+    }
+    woodBreakUntil = t + 0.1;
+  }
+  function playBongo(hand) {
+    if (!audioCtx || !settings.audio || !running || !masterGain) return;
+    const now = audioCtx.currentTime;
+    const high = hand === "high";
+    const f0 = high ? 210 + Math.random() * 40 : 105 + Math.random() * 25;
+    const f1 = Math.max(40, f0 * (0.55 + Math.random() * 0.12));
+    const dur = high ? 0.11 : 0.16;
+    const level = (high ? 0.16 : 0.20) * (0.85 + Math.random() * 0.25);
+
+    try {
+      const osc = audioCtx.createOscillator();
+      const og = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(f0, now);
+      osc.frequency.linearRampToValueAtTime(f1, now + dur);
+      og.gain.setValueAtTime(0.0001, now);
+      og.gain.linearRampToValueAtTime(level, now + 0.008);
+      og.gain.linearRampToValueAtTime(0.0001, now + dur);
+      osc.connect(og);
+      og.connect(masterGain);
+      osc.start(now);
+      osc.stop(now + dur + 0.02);
+    } catch (e) {}
+
+    if (!bongoNoiseBuf) return;
+    try {
+      const src = audioCtx.createBufferSource();
+      src.buffer = bongoNoiseBuf;
+      const bp = audioCtx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.value = high ? 900 : 420;
+      bp.Q.value = high ? 3.2 : 2.2;
+      const ng = audioCtx.createGain();
+      ng.gain.setValueAtTime(0.0001, now);
+      ng.gain.linearRampToValueAtTime(level * 0.45, now + 0.004);
+      ng.gain.linearRampToValueAtTime(0.0001, now + 0.05);
+      src.connect(bp);
+      bp.connect(ng);
+      ng.connect(masterGain);
+      src.start(now);
+      src.stop(now + 0.06);
+    } catch (e) {}
+  }
+  function scheduleBongos() {
+    if (!running) return;
+    const now = Date.now();
+    if (now < nextBongoAt) return;
+    const n = Math.random() < 0.5 ? 4 : 5;
+    let acc = 0;
+    for (let i = 0; i < n; i++) {
+      const hand = Math.random() < 0.55 ? "low" : "high";
+      const delay = acc;
+      setTimeout(() => { if (running) playBongo(hand); }, delay);
+      acc += 140 + Math.random() * 160;
+    }
+    // One phrase per minute, with a little human drift
+    nextBongoAt = now + 55000 + Math.random() * 10000;
+  }
+  function complainBird(index) {
+    const t = Date.now();
+    if (t - (lastComplainAt[index] || 0) < 20000) return;
+    lastComplainAt[index] = t;
+    for (let n = 0; n < 5; n++) {
+      setTimeout(() => { if (running) playBird(index, true); }, n * 300);
+    }
+  }
+  function playBird(index, force) {
     if (!audioCtx || !settings.audio || !running) return;
     const keys = ["m1","m2","m3","m4","m5","m6"];
     const key = keys[index];
-    if (!live[key]) return;
     const temp = values[key];
-    if (temp == null || temp < 40) return;
+    if (!force) {
+      if (!live[key]) return;
+      if (temp == null || temp < 40) return;
+    }
     const voice = BIRD_VOICE[index];
     const trend = meatTrend[key];
-    const isDone = done[key];
+    const isDone = !force && done[key];
     const now = audioCtx.currentTime;
+    const pitchTemp = (temp != null && temp >= 40) ? temp : 150;
 
     // Base frequency from temperature + small random offset
     const jitter = 0.93 + Math.random() * 0.14;
-    let startFreq = Math.max(480, Math.min(1950, (voice.base + (temp - 150) * voice.span) * jitter));
+    let startFreq = Math.max(480, Math.min(1950, (voice.base + (pitchTemp - 150) * voice.span) * jitter));
 
-    // Stronger contour based on trend / done
+    // Stronger contour based on trend / done / complaint
     let contour = 1.0;
-    if (isDone) contour = 1.40 + Math.random() * 0.08;
+    if (force) contour = 0.62 + Math.random() * 0.06;
+    else if (isDone) contour = 1.40 + Math.random() * 0.08;
     else if (trend > 0) contour = 1.30 + Math.random() * 0.06;
     else if (trend < 0) contour = 0.68 + Math.random() * 0.06;
     else contour = 1.05 + Math.random() * 0.04;
 
-    const levelBase = (isDone ? 0.13 : 0.078) * (0.88 + Math.random() * 0.24);
+    const levelBase = (force ? 0.16 : isDone ? 0.13 : 0.078) * (0.88 + Math.random() * 0.24);
     const q = voice.q * (0.85 + Math.random() * 0.3);
 
     // Distinct call shapes for the three rib racks (index 0/1/2)
@@ -963,12 +1140,22 @@
   function updateAudio() {
     if (!audioCtx || !running) return;
     const t = audioCtx.currentTime;
-    if (values.air != null) {
-      // Map pit temp into a hearable low band. 180°F ≈ 62 Hz, 225°F ≈ 72 Hz.
-      const freq = 55 + (values.air - 140) * 0.22;
+    const sp = values.setpoint != null ? values.setpoint : 225;
+    const air = values.air;
+    if (air != null) {
+      // Map pit temp into a hearable low band. 180°F ≈ 64 Hz, 225°F ≈ 74 Hz.
+      const freq = 55 + (air - 140) * 0.22;
       const f = Math.max(48, Math.min(95, freq));
       droneOsc.frequency.setTargetAtTime(f, t, 2.0);
       if (droneOsc2) droneOsc2.frequency.setTargetAtTime(f * 2, t, 2.0);
+      // Darker / quieter as pit falls below setpoint — skip while three-breaks play
+      if (t > woodBreakUntil && droneGain) {
+        const below = Math.max(0, Math.min(40, sp - air));
+        const dark = below / 40;
+        droneGain.gain.setTargetAtTime(0.16 * (1 - 0.45 * dark), t, 1.2);
+        if (droneGain2) droneGain2.gain.setTargetAtTime(0.07 * (1 - 0.35 * dark), t, 1.2);
+        droneFilter.frequency.setTargetAtTime(520 - dark * 220, t, 1.4);
+      }
     }
     const drive = Math.max(0, Math.min(100, values.drive || 0));
     noiseGain.gain.setTargetAtTime((drive / 100) * 0.08, t, 1.3);
@@ -1069,19 +1256,24 @@
       currentVirtualMin = (now - cookStartWall) / 60000;
     }
 
-    ["m1","m2","m3","m4","m5","m6"].forEach(k => {
+    ["m1","m2","m3","m4","m5","m6"].forEach((k, i) => {
       const t = newM[k];
+      const wasLive = !!live[k];
+      const prev = prevMeat[k];
       if (t != null && t > 40) {
+        const pulled = wasLive && prev != null && prev >= 140 && (t <= prev - 25 || t < 110);
         live[k] = true;
         if (deltaMin > 0) totalHeat[k] += t * deltaMin;
-        if (prevMeat[k] != null) {
-          const d = t - prevMeat[k];
+        if (prev != null) {
+          const d = t - prev;
           if (d >= TREND_THRESHOLD) meatTrend[k] = 1;
           else if (d <= -TREND_THRESHOLD) meatTrend[k] = -1;
           else meatTrend[k] = 0;
         }
         prevMeat[k] = t;
+        if (pulled) complainBird(i);
       } else {
+        if (wasLive) complainBird(i);
         live[k] = false;
         done[k] = false;
       }
@@ -1101,6 +1293,12 @@
         if (airTrend !== 0 && (now - lastNoticeAt > interval)) {
           playNotice(airTrend, airTrend < 0 && below);
           lastNoticeAt = now;
+        }
+        const sp = (row.sp != null ? row.sp : values.setpoint) || 225;
+        const needWood = airTrend < 0 && (newAir <= sp - WOOD_BELOW_SP || newAir < LOW_AIR);
+        if (needWood && (now - lastWoodAt > WOOD_COOLDOWN_MS)) {
+          playWoodBreaks();
+          lastWoodAt = now;
         }
       }
       prevAir = newAir;
@@ -1243,6 +1441,9 @@
       stageStartVirtual = { m1:0, m2:0, m3:0, m4:0, m5:0, m6:0 };
       currentVirtualMin = 0;
       cookStartWall = Date.now();
+      lastWoodAt = 0;
+      lastComplainAt = [0,0,0,0,0,0];
+      lastNoticeAt = 0;
       testIndex = 0;
       initAudio();
       if (audioCtx.state === "suspended") await audioCtx.resume();
@@ -1258,12 +1459,13 @@
         setInterval(fetchStates, POLL_MS);
       }
       setInterval(scheduleBirds, 1000);
+      setInterval(scheduleBongos, 180);
     } else {
       running = false;
       stopTestTimer();
       document.getElementById("toggleBtn").textContent = "Start";
       document.getElementById("toggleBtn").classList.remove("active");
-      if (masterGain) masterGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.4);
+      silenceAudio();
       document.getElementById("status").textContent = "Stopped";
     }
   };
