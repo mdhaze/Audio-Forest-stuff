@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   Audio Forest — Smoker Audio
-  VERSION: v1.34
+  VERSION: v1.35
   DATE:    2026-08-30
   Look here after renaming this file to index.html.
 -->
@@ -9,7 +9,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Smoker Audio v1.34</title>
+<title>Smoker Audio v1.35</title>
 <style>
   :root {
     --bg: #0c1219;
@@ -289,7 +289,7 @@
 </style>
 </head>
 <body>
-  <h1>Smoker Audio v1.34</h1>
+  <h1>Smoker Audio v1.35</h1>
   <div class="big-clock" id="bigClock">
     <div class="clock-now" id="clockNow">--:--</div>
     <div class="clock-cap">now</div>
@@ -375,7 +375,7 @@
       </div>
       <div class="help-item">
         <div class="help-title">Deep drone</div>
-        <div class="help-desc">Air temperature. Continuous low note plus a quiet octave. Darker when the pit is low. Three brief breaks in the tone mean add wood (pit falling and well below setpoint). At most every two minutes.</div>
+        <div class="help-desc">Air / pit. Quiet continuous note for presence. Off-setpoint uses Morse: S (···) every ~30s when too low, O (———) when too high. Farther off = louder and more often. Inside about ±10°F of setpoint there is no Morse.</div>
       </div>
       <div class="help-item">
         <div class="help-title">Bird calls</div>
@@ -404,7 +404,7 @@
     </div>
   </div>
 <script>
-// Audio Forest — Smoker Audio VERSION v1.34  (2026-08-30)
+// Audio Forest — Smoker Audio VERSION v1.35  (2026-08-30)
 (() => {
   function loadSheetJS() {
     return new Promise((resolve, reject) => {
@@ -484,8 +484,8 @@
   const TREND_THRESHOLD = 1.2;
   const LOW_AIR = 180;
   const HEAT_FLOOR = 140; // cook-time only counts °F above this
-  const WOOD_BELOW_SP = 15;       // °F under setpoint before "add wood" can fire
-  const WOOD_COOLDOWN_MS = 120000; // 2 minutes between three-break signals
+  const AIR_BAND = 10;            // °F deadband around setpoint: no Morse
+  const AIR_EXTREME = 25;         // °F off setpoint = urgent Morse
   const BIRD_MIN_MS = 15000;
   const BIRD_MAX_MS = 60000;
   const BIRD_DONE_MS = 2800;
@@ -556,7 +556,8 @@
   let airTrend = 0;
   let lastNoticeAt = 0;
   let lastWoodAt = 0;
-  let woodBreakUntil = 0; // audioCtx time; skip gain targeting while breaks play
+  let woodBreakUntil = 0;
+  let nextMorseAt = 0;
   let testIndex = 0;
   let testTimer = null;
   let cookStartWall = 0; // Date.now() when Start pressed (live mode)
@@ -885,8 +886,8 @@
     if (audioCtx) {
       startNoiseLoop();
       if (masterGain) masterGain.gain.setValueAtTime(settings.audio ? settings.volume : 0, audioCtx.currentTime);
-      if (droneGain) droneGain.gain.setValueAtTime(0.16, audioCtx.currentTime);
-      if (droneGain2) droneGain2.gain.setValueAtTime(0.07, audioCtx.currentTime);
+      if (droneGain) droneGain.gain.setValueAtTime(0.07, audioCtx.currentTime);
+      if (droneGain2) droneGain2.gain.setValueAtTime(0.035, audioCtx.currentTime);
       nextBongoAt = Date.now() + 2000;
       return;
     }
@@ -905,8 +906,8 @@
     droneOsc2.frequency.value = 116;
     droneFilter.type = "lowpass";
     droneFilter.frequency.value = 520;
-    droneGain.gain.value = 0.16;
-    droneGain2.gain.value = 0.07; // octave so small speakers can hear the pit
+    droneGain.gain.value = 0.07;
+    droneGain2.gain.value = 0.035; // quiet presence; Morse carries off-setpoint
     droneOsc.connect(droneFilter);
     droneFilter.connect(droneGain);
     droneGain.connect(masterGain);
@@ -986,6 +987,62 @@
       t += 0.40;
     }
     woodBreakUntil = t + 0.1;
+  }
+  function playMorseBeep(t0, dur, freq, level) {
+    if (!audioCtx || !masterGain) return;
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(freq, t0);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.linearRampToValueAtTime(level, t0 + 0.012);
+    g.gain.linearRampToValueAtTime(level * 0.85, t0 + dur * 0.7);
+    g.gain.linearRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(g);
+    g.connect(masterGain);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.02);
+  }
+  function playMorseLetter(letter, extreme) {
+    if (!audioCtx || !settings.audio || !running) return;
+    const now = audioCtx.currentTime;
+    const unit = extreme ? 0.09 : 0.12;
+    const level = extreme ? 0.16 : 0.09;
+    const freq = letter === "O" ? (extreme ? 390 : 340) : (extreme ? 240 : 270);
+    let t = now;
+    if (letter === "S") {
+      for (let i = 0; i < 3; i++) {
+        playMorseBeep(t, unit, freq, level);
+        t += unit * 2;
+      }
+    } else {
+      const dah = unit * 3;
+      for (let i = 0; i < 3; i++) {
+        playMorseBeep(t, dah, freq, level);
+        t += dah + unit;
+      }
+    }
+  }
+  function scheduleMorse() {
+    if (!running || !settings.audio) return;
+    const now = Date.now();
+    if (now < nextMorseAt) return;
+    const air = values.air;
+    const sp = values.setpoint != null ? values.setpoint : 225;
+    if (air == null) {
+      nextMorseAt = now + 5000;
+      return;
+    }
+    const err = air - sp;
+    const off = Math.abs(err);
+    if (off < AIR_BAND) {
+      nextMorseAt = now + 8000;
+      return;
+    }
+    const extreme = off >= AIR_EXTREME;
+    playMorseLetter(err < 0 ? "S" : "O", extreme);
+    const interval = extreme ? 12000 : 30000;
+    nextMorseAt = now + interval;
   }
   function playBongo(hand) {
     if (!audioCtx || !settings.audio || !running || !masterGain) return;
@@ -1216,8 +1273,8 @@
       if (t > woodBreakUntil && droneGain) {
         const below = Math.max(0, Math.min(40, sp - air));
         const dark = below / 40;
-        droneGain.gain.setTargetAtTime(0.16 * (1 - 0.45 * dark), t, 1.2);
-        if (droneGain2) droneGain2.gain.setTargetAtTime(0.07 * (1 - 0.35 * dark), t, 1.2);
+        droneGain.gain.setTargetAtTime(0.07 * (1 - 0.4 * dark), t, 1.2);
+        if (droneGain2) droneGain2.gain.setTargetAtTime(0.035 * (1 - 0.3 * dark), t, 1.2);
         droneFilter.frequency.setTargetAtTime(520 - dark * 220, t, 1.4);
       }
     }
@@ -1359,11 +1416,7 @@
           lastNoticeAt = now;
         }
         const sp = (row.sp != null ? row.sp : values.setpoint) || 225;
-        const needWood = airTrend < 0 && (newAir <= sp - WOOD_BELOW_SP || newAir < LOW_AIR);
-        if (needWood && (now - lastWoodAt > WOOD_COOLDOWN_MS)) {
-          playWoodBreaks();
-          lastWoodAt = now;
-        }
+        // Pit Morse is handled in scheduleMorse (S low / O high).
       }
       prevAir = newAir;
       values.air = newAir;
@@ -1552,6 +1605,8 @@
       }
       setInterval(scheduleBirds, 1000);
       setInterval(scheduleBongos, 180);
+      setInterval(scheduleMorse, 200);
+      nextMorseAt = Date.now() + 4000;
     } else {
       running = false;
       stopTestTimer();
