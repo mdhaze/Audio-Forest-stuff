@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   Audio Forest — Smoker Audio
-  VERSION: v1.33
+  VERSION: v1.34
   DATE:    2026-08-30
   Look here after renaming this file to index.html.
 -->
@@ -9,7 +9,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Smoker Audio v1.33</title>
+<title>Smoker Audio v1.34</title>
 <style>
   :root {
     --bg: #0c1219;
@@ -83,6 +83,25 @@
     justify-content: space-between;
     gap: 12px;
     align-items: baseline;
+  }
+  .temps .probe-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+  }
+  .temps .probe-main {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: baseline;
+    width: 100%;
+  }
+  .temps .probe-heat {
+    font-size: 11px;
+    color: var(--dim);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    min-height: 14px;
   }
   .temps div.done .value { color: var(--done); font-weight: 700; }
   .temps div.done .label { color: var(--done); }
@@ -270,7 +289,7 @@
 </style>
 </head>
 <body>
-  <h1>Smoker Audio v1.33</h1>
+  <h1>Smoker Audio v1.34</h1>
   <div class="big-clock" id="bigClock">
     <div class="clock-now" id="clockNow">--:--</div>
     <div class="clock-cap">now</div>
@@ -280,16 +299,16 @@
   <div class="temps" id="tempsPanel">
     <div id="row-air"><span class="label" id="label-air">Air</span><span class="value" id="air">—</span></div>
     <div id="row-drive"><span class="label" id="label-drive">Drive</span><span class="value" id="drive">—</span></div>
-    <div id="row-m1" style="display:none"><span class="label" id="label-m1">Meat 1</span><span class="value" id="m1">—</span></div>
-    <div id="row-m2" style="display:none"><span class="label" id="label-m2">Meat 2</span><span class="value" id="m2">—</span></div>
-    <div id="row-m3" style="display:none"><span class="label" id="label-m3">Meat 3</span><span class="value" id="m3">—</span></div>
-    <div id="row-m4" style="display:none"><span class="label" id="label-m4">Meat 4</span><span class="value" id="m4">—</span></div>
-    <div id="row-m5" style="display:none"><span class="label" id="label-m5">Meat 5</span><span class="value" id="m5">—</span></div>
-    <div id="row-m6" style="display:none"><span class="label" id="label-m6">Meat 6</span><span class="value" id="m6">—</span></div>
+    <div class="probe-row" id="row-m1" style="display:none"><div class="probe-main"><span class="label" id="label-m1">Meat 1</span><span class="value" id="m1">—</span></div><div class="probe-heat" id="heat-m1"></div></div>
+    <div class="probe-row" id="row-m2" style="display:none"><div class="probe-main"><span class="label" id="label-m2">Meat 2</span><span class="value" id="m2">—</span></div><div class="probe-heat" id="heat-m2"></div></div>
+    <div class="probe-row" id="row-m3" style="display:none"><div class="probe-main"><span class="label" id="label-m3">Meat 3</span><span class="value" id="m3">—</span></div><div class="probe-heat" id="heat-m3"></div></div>
+    <div class="probe-row" id="row-m4" style="display:none"><div class="probe-main"><span class="label" id="label-m4">Meat 4</span><span class="value" id="m4">—</span></div><div class="probe-heat" id="heat-m4"></div></div>
+    <div class="probe-row" id="row-m5" style="display:none"><div class="probe-main"><span class="label" id="label-m5">Meat 5</span><span class="value" id="m5">—</span></div><div class="probe-heat" id="heat-m5"></div></div>
+    <div class="probe-row" id="row-m6" style="display:none"><div class="probe-main"><span class="label" id="label-m6">Meat 6</span><span class="value" id="m6">—</span></div><div class="probe-heat" id="heat-m6"></div></div>
   </div>
   <div class="controls">
     <button id="toggleBtn">Start</button>
-    <button id="resetHeatBtn" style="font-size:12px;">Reset Heat</button>
+    <button id="resetHeatBtn" style="font-size:12px;">Reset cook-time</button>
   </div>
   <div class="status" id="status">Tap Start to begin</div>
   <button class="icon-btn settings-btn" id="settingsBtn" title="Settings">⚙</button>
@@ -372,7 +391,7 @@
       </div>
       <div class="help-item">
         <div class="help-title">Display format</div>
-        <div class="help-desc">Air shows current → setpoint. Meat shows current, active stage end condition, total heat, and stage number.</div>
+        <div class="help-desc">Air shows current → setpoint. Meat shows current and target. A second line is cook-time: °F·minutes above 140°F only. Reset cook-time zeroes those counters.</div>
       </div>
       <div class="help-item">
         <div class="help-title">Test Mode</div>
@@ -385,7 +404,7 @@
     </div>
   </div>
 <script>
-// Audio Forest — Smoker Audio VERSION v1.33  (2026-08-30)
+// Audio Forest — Smoker Audio VERSION v1.34  (2026-08-30)
 (() => {
   function loadSheetJS() {
     return new Promise((resolve, reject) => {
@@ -464,6 +483,7 @@
   const POLL_MS = 35000;
   const TREND_THRESHOLD = 1.2;
   const LOW_AIR = 180;
+  const HEAT_FLOOR = 140; // cook-time only counts °F above this
   const WOOD_BELOW_SP = 15;       // °F under setpoint before "add wood" can fire
   const WOOD_COOLDOWN_MS = 120000; // 2 minutes between three-break signals
   const BIRD_MIN_MS = 15000;
@@ -1307,7 +1327,7 @@
       if (t != null && t > 40) {
         const pulled = wasLive && prev != null && prev >= 140 && (t <= prev - 25 || t < 110);
         live[k] = true;
-        if (deltaMin > 0) totalHeat[k] += t * deltaMin;
+        if (deltaMin > 0) totalHeat[k] += Math.max(0, t - HEAT_FLOOR) * deltaMin;
         if (prev != null) {
           const d = t - prev;
           if (d >= TREND_THRESHOLD) meatTrend[k] = 1;
@@ -1371,12 +1391,10 @@
         const stages = getStages(k);
         const idx = stageIdx[k] || 0;
         const st = stages[Math.min(idx, stages.length - 1)] || { duration: 0, target: 0 };
-        const heat = Math.round(totalHeat[k]).toLocaleString();
         let txt = values[k].toFixed(1);
         if (done[k]) {
           txt += ` DONE`;
         } else {
-          // Show the active end condition of the current stage
           if (st.target > 0) txt += ` → ${st.target}`;
           else if (st.duration > 0) {
             const remain = Math.max(0, (st.duration || 0) - (currentVirtualMin - (stageStartVirtual[k] || 0)));
@@ -1384,10 +1402,16 @@
           }
           if (stages.length > 1) txt += `  S${idx + 1}`;
         }
-        txt += ` (${heat})`;
         el.textContent = txt;
+        const heatEl = document.getElementById("heat-" + k);
+        if (heatEl) {
+          const h = totalHeat[k] || 0;
+          heatEl.textContent = h > 0.5 ? Math.round(h).toLocaleString() + " °F·min above 140" : "";
+        }
       } else {
         el.textContent = "—";
+        const heatEl = document.getElementById("heat-" + k);
+        if (heatEl) heatEl.textContent = "";
       }
     });
     updateVisibility();
