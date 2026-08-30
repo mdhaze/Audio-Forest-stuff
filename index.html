@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   Audio Forest — Smoker Audio
-  VERSION: v1.31
+  VERSION: v1.32
   DATE:    2026-08-30
   Look here after renaming this file to index.html.
 -->
@@ -9,7 +9,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Smoker Audio v1.31</title>
+<title>Smoker Audio v1.32</title>
 <style>
   :root {
     --bg: #0c1219;
@@ -240,7 +240,7 @@
 </style>
 </head>
 <body>
-  <h1>Smoker Audio v1.31</h1>
+  <h1>Smoker Audio v1.32</h1>
   <div class="temps" id="tempsPanel">
     <div id="row-air"><span class="label" id="label-air">Air</span><span class="value" id="air">—</span></div>
     <div id="row-drive"><span class="label" id="label-drive">Drive</span><span class="value" id="drive">—</span></div>
@@ -349,7 +349,7 @@
     </div>
   </div>
 <script>
-// Audio Forest — Smoker Audio VERSION v1.31  (2026-08-30)
+// Audio Forest — Smoker Audio VERSION v1.32  (2026-08-30)
 (() => {
   function loadSheetJS() {
     return new Promise((resolve, reject) => {
@@ -628,13 +628,20 @@
         }
       }
       if (probeStart > 0) {
-        for (let i = 0; i < 6; i++) {
+        for (let i = 0; i < 8; i++) {
           const row = cfg[probeStart + i];
-          if (!row) continue;
-          const key = "m" + (i + 1);
+          if (!row || row[0] == null || row[0] === "") continue;
+          const num = Number(row[0]);
+          if (isNaN(num)) continue;
           const pName = row[1] != null && String(row[1]).trim() ? String(row[1]).trim() : null;
           const tgt = row[2] != null ? parseFloat(row[2]) : NaN;
           const active = row[3] != null ? Number(row[3]) : 1;
+          if (num === 0) {
+            if (pName) labels.air = pName;
+            continue;
+          }
+          if (num < 1 || num > 6) continue;
+          const key = "m" + num;
           if (pName) labels[key] = pName;
           if (!isNaN(tgt)) targets[key] = active ? tgt : 0;
         }
@@ -657,13 +664,13 @@
             headerRow = r;
             col.t = c;
           }
-          if (h === "airtemp_f" || h === "air" || h === "air_temp") col.air = c;
-          if (h === "probe1_f" || h === "m1" || h === "probe1") col.m1 = c;
-          if (h === "probe2_f" || h === "m2" || h === "probe2") col.m2 = c;
-          if (h === "probe3_f" || h === "m3" || h === "probe3") col.m3 = c;
-          if (h === "probe4_f" || h === "m4" || h === "probe4") col.m4 = c;
-          if (h === "probe5_f" || h === "m5" || h === "probe5") col.m5 = c;
-          if (h === "probe6_f" || h === "m6" || h === "probe6") col.m6 = c;
+          if (h === "airtemp_f" || h === "air" || h === "air_temp" || h === "probe0_f" || h === "probe0" || h === "p0" || h === "ambient") col.air = c;
+          if (h === "probe1_f" || h === "m1" || h === "probe1" || h === "p1") col.m1 = c;
+          if (h === "probe2_f" || h === "m2" || h === "probe2" || h === "p2") col.m2 = c;
+          if (h === "probe3_f" || h === "m3" || h === "probe3" || h === "p3") col.m3 = c;
+          if (h === "probe4_f" || h === "m4" || h === "probe4" || h === "p4") col.m4 = c;
+          if (h === "probe5_f" || h === "m5" || h === "probe5" || h === "p5") col.m5 = c;
+          if (h === "probe6_f" || h === "m6" || h === "probe6" || h === "p6") col.m6 = c;
           if (h === "drive" || h === "drive_%" || h === "drive_pct") col.drive = c;
           if (h === "setpoint" || h === "sp" || h === "setpoint_f") col.sp = c;
           if (h === "event_note" || h === "note" || h === "event") col.note = c;
@@ -752,6 +759,7 @@
       [],
       ["Probe #", "Name", "Target °F", "Active (1/0)", "Notes"]
     ];
+    cfgData.push([0, settings.labels.air || "Ambient", "", 1, "Probe 0 is pit / ambient air"]);
     for (let i = 1; i <= 6; i++) {
       const k = "m" + i;
       cfgData.push([i, settings.labels[k] || ("Meat " + i), settings.targets[k] || 0, settings.targets[k] > 0 ? 1 : 0, ""]);
@@ -763,7 +771,7 @@
       ["TIME SERIES — Temperature snapshots (°F)"],
       [],
       [],
-      ["Time_min", "AirTemp_F", "Probe1_F", "Probe2_F", "Probe3_F", "Probe4_F", "Probe5_F", "Probe6_F", "Drive", "Setpoint", "Event_Note"]
+      ["Time_min", "Probe0_F", "Probe1_F", "Probe2_F", "Probe3_F", "Probe4_F", "Probe5_F", "Probe6_F", "Drive", "Setpoint", "Event_Note"]
     ];
     series.forEach(r => {
       serData.push([
