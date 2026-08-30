@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Smoker Audio</title>
+<title>Smoker Audio v1.19</title>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
   :root {
@@ -80,14 +80,6 @@
     color: var(--dim);
     text-align: center;
     min-height: 18px;
-  }
-  .version {
-    position: absolute;
-    bottom: 14px;
-    right: 18px;
-    font-size: 15px;
-    font-weight: 700;
-    color: rgba(255,255,255,0.55);
   }
   .icon-btn {
     position: absolute;
@@ -237,7 +229,7 @@
 </style>
 </head>
 <body>
-  <h1>Smoker Audio</h1>
+  <h1>Smoker Audio v1.19</h1>
   <div class="temps" id="tempsPanel">
     <div id="row-air"><span class="label" id="label-air">Air</span><span class="value" id="air">—</span></div>
     <div id="row-drive"><span class="label" id="label-drive">Drive</span><span class="value" id="drive">—</span></div>
@@ -255,7 +247,6 @@
   <div class="status" id="status">Tap Start to begin</div>
   <button class="icon-btn settings-btn" id="settingsBtn" title="Settings">⚙</button>
   <button class="icon-btn help-btn" id="helpBtn" title="Help">?</button>
-  <div class="version">v1.18</div>
   <!-- Settings Panel -->
   <div class="panel" id="settingsPanel">
     <div class="panel-card">
