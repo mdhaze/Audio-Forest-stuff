@@ -1,9 +1,9 @@
-[README.md](https://github.com/user-attachments/files/31617426/README.md)
-# Audio Forest — Beginner Guide
+[README.md](https://github.com/user-attachments/files/31618316/README.md)
+# Audio Forest — Beginner Guide 1.35
 
 For someone who already has a smoker, a Fireboard, and a couple of meat probes.
 
-Working program: `index.html` (**v1.34**). Design manifesto: `Audio_Forest_Starter_Document.md`. Practice cook: `Three_Rack_Ribs_Drill.xlsx`.
+Working program: `index.html` (**v1.35**). Design manifesto: `Audio_Forest_Starter_Document.md`. Practice cook: `Three_Rack_Ribs_Drill.xlsx`.
 
 ---
 
@@ -32,14 +32,37 @@ Two large numbers at the top, readable across a room:
 Each live meat probe then shows:
 
 - Temperature and target, or DONE
-- A second quiet line: cook-time as **°F·minutes above 140°F**
+- A second quiet line: cook-time as **°F·minutes above 140°F** (F-min)
 
 Cook-time only counts while the probe is above 140°F. A probe sitting in room air, or pulled from the meat, adds nothing. **Reset cook-time** zeroes those counters. Hit it at the start of a pack.
 
+## F-min is data only
+
+F-min is **not** a definition of done. Done is still target temperature, stage time, or how the meat feels.
+
+The number is:
+
+`Σ max(0, probe °F − 140) × minutes`
+
+It is a progress meter and a way to compare racks on the same cook. It is a bad substitute for 195°F.
+
+Do not treat `(195 − 140) × 120 = 6,600` as a finish line. That assumes two hours sitting at a flat 195°F and that every degree above 140 counts equally. Collagen conversion is not linear. Three different temperature paths can print the same 6,600 and not be the same meat. A normal pack of ribs that you pull when it first hits 195 will usually show a **much smaller** F-min than 6,600, because most of the cook is spent closer to 160–175 than to 195.
+
+**Log F-min at the moment you actually pull.** Write down the rack, the finish temp, and the F-min on the screen. After a few of your own cooks that log is what makes the number mean something. Until then it is just a notebook.
+
 ## What each sound means
 
-**Low steady tone (the drone)**  
-Pit / ambient air. Continuous while the program is running. If the pit is falling and well below setpoint (or below 180°F), the tone goes darker and you hear **three short breaks**. That means add wood. At most once every two minutes.
+**Quiet drone**  
+Pit / ambient air, presence only. Kept low so it does not dominate.
+
+**Morse on the pit**  
+When air is more than about **10°F off setpoint**:
+
+- Too low — Morse **S** (···) about every 30 seconds. Add wood.
+- Too high — Morse **O** (———) about every 30 seconds.
+- **25°F or more off** — same letter, louder and more often (about every 12 seconds).
+
+Inside the ±10°F band there is no Morse. The old three-break “add wood” drone stutter is gone.
 
 **Soft hiss**  
 The blower. Brighter or louder hiss means the controller is working harder. This is not the add-wood signal.
@@ -73,11 +96,12 @@ Old files that still say `AirTemp_F` will import.
 
 ## How to run a real cook
 
-1. Open `index.html`. The comment at the top of the file must say **v1.34**.
+1. Open `index.html`. The comment at the top of the file must say **v1.35**.
 2. Settings (gear). Turn **Test Mode off**.
 3. Home Assistant URL and long-lived token.
 4. Meat targets (195 is typical for ribs). `0` means that probe is not used for DONE.
 5. Close Settings. Press **Start**.
+6. When you pull a rack, write down its F-min. Do not reset cook-time until the pack is finished or you will lose the log.
 
 The status line must say **Live**. If it says **Test**, you are hearing a fake cook.
 
@@ -97,7 +121,7 @@ If a probe does not appear, the entity name does not match or Home Assistant is 
 3. **Test Mode on**. **Accelerated on**.
 4. Start.
 
-That series walks the pit up, sags it (add-wood breaks), runs three birds, pulls Meat 3 (complaint), then takes Meat 1 and Meat 2 to DONE.
+That series walks the pit up, sags it (Morse S), runs three birds, pulls Meat 3 (complaint), then takes Meat 1 and Meat 2 to DONE.
 
 First import needs a network connection so the spreadsheet library can load. After that the series is saved in the browser.
 
@@ -110,7 +134,7 @@ It will not talk. It will not say “205 degrees.” It will not replace the Fir
 It will tell you, by ear:
 
 - the fire is alive
-- the fire is fading (add wood)
+- the fire is too low (Morse S) or too high (Morse O)
 - this rack is still cooking
 - this rack is done
 - this probe just came out or went dead
