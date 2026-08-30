@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   Audio Forest — Smoker Audio
-  VERSION: v1.35
+  VERSION: v1.36
   DATE:    2026-08-30
   Look here after renaming this file to index.html.
 -->
@@ -9,7 +9,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Smoker Audio v1.35</title>
+<title>Smoker Audio v1.36</title>
 <style>
   :root {
     --bg: #0c1219;
@@ -78,7 +78,7 @@
     width: 100%;
     max-width: 340px;
   }
-  .temps div {
+  .temps > div {
     display: flex;
     justify-content: space-between;
     gap: 12px;
@@ -87,7 +87,7 @@
   .temps .probe-row {
     flex-direction: column;
     align-items: stretch;
-    gap: 2px;
+    gap: 3px;
   }
   .temps .probe-main {
     display: flex;
@@ -97,14 +97,16 @@
     width: 100%;
   }
   .temps .probe-heat {
-    font-size: 11px;
-    color: var(--dim);
+    display: block;
+    font-size: 13px;
+    color: #9eb0c4;
     text-align: right;
     font-variant-numeric: tabular-nums;
-    min-height: 14px;
+    min-height: 16px;
+    letter-spacing: 0.02em;
   }
-  .temps div.done .value { color: var(--done); font-weight: 700; }
-  .temps div.done .label { color: var(--done); }
+  .temps .probe-row.done .value { color: var(--done); font-weight: 700; }
+  .temps .probe-row.done .label { color: var(--done); }
   .label { color: var(--dim); min-width: 70px; }
   .value { color: var(--ink); font-variant-numeric: tabular-nums; text-align: right; }
   .controls {
@@ -289,7 +291,7 @@
 </style>
 </head>
 <body>
-  <h1>Smoker Audio v1.35</h1>
+  <h1>Smoker Audio v1.36</h1>
   <div class="big-clock" id="bigClock">
     <div class="clock-now" id="clockNow">--:--</div>
     <div class="clock-cap">now</div>
@@ -404,7 +406,7 @@
     </div>
   </div>
 <script>
-// Audio Forest — Smoker Audio VERSION v1.35  (2026-08-30)
+// Audio Forest — Smoker Audio VERSION v1.36  (2026-08-30)
 (() => {
   function loadSheetJS() {
     return new Promise((resolve, reject) => {
@@ -1458,8 +1460,8 @@
         el.textContent = txt;
         const heatEl = document.getElementById("heat-" + k);
         if (heatEl) {
-          const h = totalHeat[k] || 0;
-          heatEl.textContent = h > 0.5 ? Math.round(h).toLocaleString() + " °F·min above 140" : "";
+          const h = Math.max(0, totalHeat[k] || 0);
+          heatEl.textContent = Math.round(h).toLocaleString() + " F-min above 140";
         }
       } else {
         el.textContent = "—";
